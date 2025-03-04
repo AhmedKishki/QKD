@@ -62,7 +62,7 @@ def train_quantization(
     # -----------------------------------
     print("\n[EVALUATION] Evaluating Base Model before Quantization...")
     model_init_acc = evaluate_model_quantized(model, val_loader)
-    print(f"[RESULT] Base Model Accuracy: {model_init_acc:.2f}%")
+    print(f"[RESULT] Base Model Accuracy: {model_init_acc}")
 
     # -----------------------------------
     # Quantization-Aware Training (QAT)
@@ -75,7 +75,7 @@ def train_quantization(
 
     print("\n[EVALUATION] Evaluating QAT Model...")
     model_qat_acc = evaluate_model_quantized(model_qat, val_loader)
-    print(f"[RESULT] QAT Model Accuracy: {model_qat_acc:.2f}%")
+    print(f"[RESULT] QAT Model Accuracy: {model_qat_acc}")
 
     # -----------------------------------
     # Post-Training Quantization (PTQ)
@@ -85,7 +85,7 @@ def train_quantization(
 
     print("\n[EVALUATION] Evaluating PTQ Model...")
     model_ptq_acc = evaluate_model_quantized(model_ptq, val_loader)
-    print(f"[RESULT] PTQ Model Accuracy: {model_ptq_acc:.2f}%")
+    print(f"[RESULT] PTQ Model Accuracy: {model_ptq_acc}")
 
     # -----------------------------------
     # Save results to CSV

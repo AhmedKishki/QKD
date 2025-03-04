@@ -1,7 +1,6 @@
 import os
 import csv
 import torch
-import torch.optim as optim
 
 from helper2 import (
     quantization_knowledge_distillation,
@@ -11,26 +10,30 @@ from helper2 import (
     get_data_loaders
 )
 
-def check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, temperature):
+def check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
     """
     Checks if a given experiment result already exists in the CSV file.
     """
     print(f"\n[INFO] Checking existing experiments for:")
-    print(f"       Teacher: {teacher_model_name}, Student: {student_model_name}, Alpha: {alpha_teacher:.1f}, Temp: {temperature:.1f}")
+    print(f"       Teacher: {teacher_model_name}, Student: {student_model_name}, Alpha: t:{alpha_teacher:.1f}, s:{alpha_student:.1f}, Temp: {temperature:.1f}")
 
     if not os.path.exists(csv_filename):
         print("[INFO] CSV file does not exist. Proceeding with experiment.")
         return False
-    
+
     with open(csv_filename, mode='r', newline='') as file:
-        reader = csv.reader(file)
+        reader = csv.DictReader(file)
         for row in reader:
-            if len(row) < 5:
-                continue  # Skip malformed rows
-            if row[0] == teacher_model_name and row[1] == student_model_name and row[2] == f"{alpha_teacher:.1f}" and row[3] == f"{temperature:.1f}":
+            if not row:
+                continue  # Skip empty rows
+            if (row['Teacher'] == teacher_model_name and
+                row['Student'] == student_model_name and
+                row['Alpha'] == f't:{alpha_teacher:.1f}, s:{alpha_student:.1f}' and
+                row['Temperature'] == f'{temperature:.1f}' and
+                row['Epochs'] == f"{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}"):
                 print("[WARNING] Experiment already exists. Skipping...")
                 return True  
-                
+
     print("[INFO] Experiment does not exist. Proceeding with training.")
     return False
 
@@ -58,7 +61,7 @@ def train_quantized_student_with_teacher(
     csv_filename = "/home/ida01/ew2218/QKD/qkd_results_200.csv"
 
     # Check if experiment already exists
-    if check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, temperature):
+    if check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
         print(f"[SKIP] Experiment {teacher_model_name} -> {student_model_name} (alpha={alpha_teacher:.1f}, temp={temperature:.1f}) already completed.")
         return
     
@@ -67,6 +70,10 @@ def train_quantized_student_with_teacher(
     print(f"       Alpha Student: {alpha_student:.1f}, Alpha Teacher: {alpha_teacher:.1f}, Temperature: {temperature:.1f}")
     print(f"       Training Details: Self-Studying: {num_epochs_selfstudying} epochs, Co-Studying: {num_epochs_costudying} epochs, Tutoring: {num_epochs_tutoring} epochs")
     print(f"       Device: {device}, Max LR: {max_lr:.2e}, Min LR: {min_lr:.2e}, Teacher LR: {teacher_lr:.2e}")
+
+    # Move models to device
+    teacher.to(device)
+    student.to(device)
 
     # Train with quantization knowledge distillation
     student = quantization_knowledge_distillation(
@@ -88,7 +95,7 @@ def train_quantized_student_with_teacher(
 
     print(f"\n[EVALUATION] Evaluating Quantized Student Model ({student_model_name})...")
     student_qkd_acc = evaluate_model_quantized(student, val_loader)
-    print(f"[RESULT] Accuracy: {student_qkd_acc:.2f}% (Alpha Teacher: {alpha_teacher:.1f}, Alpha Student: {alpha_student:.1f}, Temperature: {temperature:.1f})")
+    print(f"[RESULT] QKD Accuracy: {student_qkd_acc}")
 
     # Save results to CSV
     print("[INFO] Saving results to CSV...")
@@ -96,9 +103,9 @@ def train_quantized_student_with_teacher(
         csv_filename,
         teacher_model_name,
         student_model_name,
-        alpha_teacher,
-        alpha_student,
+        f't:{alpha_teacher:.1f}, s:{alpha_student:.1f}',
         temperature,
+        f"{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}",
         student_qkd_acc
     )
     print("[SUCCESS] Experiment results saved.")
@@ -116,15 +123,12 @@ def main():
     # ------------------------------
     # KD Hyperparameters
     # ------------------------------
-    alphas_student = [0.5, 1.0]
-    alphas_teacher = [0.5, 1.0, 0.7, 0.3]
-    temperatures = [6.0, 4.0, 2.0]
+    alpha_st_pairs = [(0.5,0.5), (1.0,1.0), (1.0,0.5)]
+    temperatures = [6.0]
+    num_epochs = [(5,5,5), (20,10,20), (30,0,20)]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
-    num_epochs_selfstudying = 20
-    num_epochs_costudying = 10
-    num_epochs_tutoring = 20
 
     # ------------------------------
     # Data Loaders
@@ -137,19 +141,18 @@ def main():
     # Define Teacher and Student Models
     # ------------------------------
     teacher_student_pairs = [
-        ('mobilenet_v3_large', 'mobilenet_v3_small'), 
-        ('efficientnet_v2_l', 'efficientnet_v2_s'),
-        ('resnet50', 'resnet18')
+        ('mobilenet_v3_small', 'mobilenet_v3_small'),
+        ('resnet18', 'resnet18'),
+        ('mobilenet_v3_large', 'mobilenet_v3_small')
     ]
     
     for teacher_model_name, student_model_name in teacher_student_pairs:
         print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
-
         teacher = get_model(teacher_model_name, pretrained=True)
         student = get_model(student_model_name, pretrained=True)
-
-        for alpha_s in alphas_student:
-            for alpha_t in alphas_teacher:
+        
+        for num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring in num_epochs:
+            for alpha_s, alpha_t in alpha_st_pairs:
                 for temp in temperatures:
                     print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
                     train_quantized_student_with_teacher(

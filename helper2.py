@@ -523,14 +523,14 @@ def save_results_csv_quant(csv_path,
 def save_results_csv_qkd(csv_path,
                           teacher_model,
                           student_model,
-                          alpha_teacher,
-                          alpha_student,
+                          alpha,
                           temperature,
+                          epochs,
                           student_qkd_acc):
     """
     Saves the results to a CSV file. If the file exists, it appends a new row; otherwise, it creates the file.
     """
-    headers = ['Teacher', 'Student', 'Alpha', 'Temperature', 'QKD Accuracy']
+    headers = ['Teacher', 'Student', 'Alpha', 'Temperature', 'Epochs', 'QKD Accuracy']
     file_exists = os.path.exists(csv_path)
     
     with open(csv_path, mode='a' if file_exists else 'w', newline='') as csvfile:
@@ -542,8 +542,9 @@ def save_results_csv_qkd(csv_path,
         writer.writerow({
             'Teacher': teacher_model,
             'Student': student_model,
-            'Alpha': f't:{alpha_teacher:.1f}, s:{alpha_student:.1f}',
+            'Alpha': alpha,
             'Temperature': f'{temperature:.1f}',
+            'Epochs': epochs,
             'QKD Accuracy': student_qkd_acc
         })
     
