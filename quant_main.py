@@ -41,7 +41,7 @@ def train_quantization(
     device='cuda',
     max_lr=1e-3,
     min_lr=1e-6,
-    csv_filename="/home/ida01/ew2218/QKD/quant_results.csv"
+    csv_filename="/home/ida01/ew2218/QKD/quant_results_200.csv"
 ): 
     """
     Trains a model using quantization techniques (QAT and PTQ) only if results do not already exist.
