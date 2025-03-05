@@ -121,14 +121,26 @@ def main():
     num_workers = 16
     
     # ------------------------------
-    # KD Hyperparameters
+    # Experiment 1 Hyperparameters
     # ------------------------------
-    alpha_st_pairs = [(0.5,0.5), (1.0,1.0), (1.0,0.5)]
-    temperatures = [6.0]
-    num_epochs = [(5,5,5), (20,10,20), (30,0,20)]
+    
+    alpha_st_pairs = [(0.5,0.5), (1.0,0.5), (0.7,0.3), (0.3,0.7)]
+    temperatures = [6.0, 5.0, 4.0]
+    num_epochs = [(5,5,5), (20,10,20)]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
+    
+    # ------------------------------
+    # Experiment 2 Hyperparameters
+    # ------------------------------
+    
+    # alpha_st_pairs = []
+    # temperatures = []
+    # num_epochs = []
+    # max_lr = 1e-3
+    # min_lr = 1e-6
+    # teacher_lr = 1e-6
 
     # ------------------------------
     # Data Loaders

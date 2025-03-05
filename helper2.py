@@ -502,7 +502,7 @@ def save_results_csv_quant(csv_path,
     Saves the results to a CSV file. If the file exists, it appends a new row; otherwise, it creates the file.
     Headers: 'Teacher, Student, KD Algorithm, Alpha, Temperature, Teacher Accuracy, Student Accuracy, KD Student Accuracy'
     """
-    headers = ['Model', 'Accuracy', 'PTQ Accuracy', 'QAT Accuracy']
+    headers = ['Model', 'Base Accuracy', 'PTQ Accuracy', 'QAT Accuracy']
     file_exists = os.path.exists(csv_path)
     
     with open(csv_path, mode='a' if file_exists else 'w', newline='') as csvfile:
@@ -515,7 +515,7 @@ def save_results_csv_quant(csv_path,
             'Model': model,
             'Base Accuracy': base_acc,
             'PTQ Accuracy': ptq_acc,
-            'QAT  Accuracy': qat_acc,
+            'QAT Accuracy': qat_acc,
         })
     
     print(f"Saved results to {csv_path}")
