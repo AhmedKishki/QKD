@@ -3,8 +3,9 @@ import shutil
 import random
 
 # Paths
-train_dir = "/home/ida01/ew2218/QKD/ImageNet/train"
-train200_dir = "/home/ida01/ew2218/QKD/ImageNet/train200"
+cwd = os.getcwd()
+train_dir = os.path.join(cwd, "ImageNet/train")
+train200_dir = os.path.join(cwd, "ImageNet/train200")
 
 # Ensure output directory exists
 os.makedirs(train200_dir, exist_ok=True)

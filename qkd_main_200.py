@@ -10,6 +10,8 @@ from helper2 import (
     get_data_loaders
 )
 
+cwd = os.getcwd()
+
 def check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
     """
     Checks if a given experiment result already exists in the CSV file.
@@ -58,7 +60,7 @@ def train_quantized_student_with_teacher(
     """
     Trains a student model using quantized knowledge distillation from a teacher model.
     """
-    csv_filename = "/home/ida01/ew2218/QKD/qkd_results_200.csv"
+    csv_filename = os.path.join(cwd, "results_qkd_200.csv")
 
     # Check if experiment already exists
     if check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
@@ -115,8 +117,8 @@ def main():
     # Global Configuration
     # ------------------------------
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_dir = "/home/ida01/ew2218/QKD/ImageNet/train200"
-    val_dir = "/home/ida01/ew2218/QKD/ImageNet/valid"
+    train_dir = os.path.join(cwd, "ImageNet/train_200")
+    val_dir = os.path.join(cwd, "ImageNet/valid")
     batch_size = 64
     num_workers = 16
     

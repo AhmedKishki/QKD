@@ -1,8 +1,11 @@
 #!/bin/bash
 
+# Get the directory of the script
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+
 # Define download and extraction directories
-DOWNLOAD_DIR="/home/ida01/ew2218/QKD/ImageNet"
-EXTRACT_DIR="/home/ida01/ew2218/QKD/ImageNet"
+DOWNLOAD_DIR="$SCRIPT_DIR/ImageNet"
+EXTRACT_DIR="$SCRIPT_DIR/ImageNet"
 
 # Create directories if they don’t exist
 mkdir -p "$DOWNLOAD_DIR"
