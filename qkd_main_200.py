@@ -34,7 +34,7 @@ def check_if_experiment_exists(csv_filename, teacher_model_name, student_model_n
                 row['Temperature'] == f'{temperature:.1f}' and
                 row['Epochs'] == f"{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}"):
                 print("[WARNING] Experiment already exists. Skipping...")
-                return True  
+                return True
 
     print("[INFO] Experiment does not exist. Proceeding with training.")
     return False
@@ -60,7 +60,7 @@ def train_quantized_student_with_teacher(
     """
     Trains a student model using quantized knowledge distillation from a teacher model.
     """
-    csv_filename = os.path.join(cwd, "results_qkd_200.csv")
+    csv_filename = os.path.join(cwd, "qkd_results_200.csv")
 
     # Check if experiment already exists
     if check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
@@ -117,7 +117,7 @@ def main():
     # Global Configuration
     # ------------------------------
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_dir = os.path.join(cwd, "ImageNet/train_200")
+    train_dir = os.path.join(cwd, "ImageNet/train200")
     val_dir = os.path.join(cwd, "ImageNet/valid")
     batch_size = 64
     num_workers = 16
@@ -128,7 +128,7 @@ def main():
     
     alpha_st_pairs = [(0.5,0.5), (1.0,0.5), (0.7,0.3), (0.3,0.7)]
     temperatures = [6.0]
-    num_epochs = [(5,5,5), (20,10,20), (10,20,20), (10,10,30)]
+    num_epochs = [(5,5,5),(10,5,5),(5,10,10),(5,5,10)]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
