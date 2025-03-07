@@ -262,10 +262,6 @@ def quantization_aware_training(model, train_loader, device, num_epochs, max_lr=
     print("Quantization-Aware Training completed and model converted using FX Graph Mode.")
 
     return model_fx
-
-    """Soft teacher guidance early, sharper later."""
-    decay_factor = (min_T / max_T) ** (epoch / total_epochs)
-    return max_T * decay_factor
 ############################################################################################
 def quantization_knowledge_distillation(
     student,
@@ -363,7 +359,7 @@ def quantization_knowledge_distillation(
 
             # Compute student losses
             s_ce_loss = F.cross_entropy(student_outputs, labels)
-            s_kd_loss = kd_loss(student_outputs, teacher_outputs.detach(), temperature)
+            s_kd_loss = kd_loss_fn(student_outputs, teacher_outputs.detach(), temperature)
 
             student_loss = alpha_s * s_kd_loss + (1 - alpha_s) * s_ce_loss
 
