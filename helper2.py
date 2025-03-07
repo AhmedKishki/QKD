@@ -290,6 +290,9 @@ def quantization_knowledge_distillation(
         kd_loss_fn = cs_loss
     else:
         raise ValueError(f"Invalid KD loss function: {kd_loss}")
+    
+    print("\nStarting Quantization-Aware Knowledge Distillation (QKD) training.")
+    print(f"\nKD Loss: {kd_loss}")
                          
     num_epochs = num_epochs_selfstudying + num_epochs_costudying + num_epochs_tutoring
  
