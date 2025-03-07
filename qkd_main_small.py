@@ -126,9 +126,9 @@ def main():
     # Experiment 1 Hyperparameters
     # ------------------------------
     
-    alpha_st_pairs = [(0.5,0.5), (1.0,0.5), (0.7,0.3), (0.3,0.7)]
+    alpha_st_pairs = [(0.5,0.5),(1.0,0.5),(0.7,0.3),(0.3,0.7),(1.0,0.3),(1.0,0.7)]
     temperatures = [6.0]
-    num_epochs = [(10,5,5), (5,5,10), (5,10,5)]
+    num_epochs = [(5,5,5),(10,5,5),(5,10,10),(5,5,10)]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
@@ -137,9 +137,20 @@ def main():
     # Experiment 2 Hyperparameters
     # ------------------------------
     
-    # alpha_st_pairs = []
-    # temperatures = []
-    # num_epochs = []
+    # alpha_st_pairs = [(0.5,0.0),(1.0,0.0),(0.3,0.0),(0.7,0.0)]
+    # temperatures = [6.0]
+    # num_epochs = [(10,0,10),(0,0,20)]
+    # max_lr = 1e-3
+    # min_lr = 1e-6
+    # teacher_lr = 1e-6
+    
+    # ------------------------------
+    # Experiment 3 Hyperparameters
+    # ------------------------------
+    
+    # alpha_st_pairs = [(0.5,0.0), (1.0,0.0)]
+    # temperatures = [6.0]
+    # num_epochs = [(10,0,10),(0,0,20)]
     # max_lr = 1e-3
     # min_lr = 1e-6
     # teacher_lr = 1e-6
