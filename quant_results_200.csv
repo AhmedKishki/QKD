@@ -1,0 +1,2 @@
+Model,Base Accuracy,PTQ Accuracy,QAT Accuracy
+mobilenet_v3_small,"top1: 67.01, top5: 87.18","top1: 1.14, top5: 3.65","top1: 57.77, top5: 80.66"

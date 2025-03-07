@@ -13,6 +13,8 @@ from helper2 import (
     save_results_csv_quant
 )
 
+cwd = os.getcwd()
+
 def check_if_experiment_exists(csv_filename, model_name):
     """
     Checks if a given model result already exists in the CSV file.
@@ -41,7 +43,7 @@ def train_quantization(
     device='cuda',
     max_lr=1e-3,
     min_lr=1e-6,
-    csv_filename="/home/ida01/ew2218/QKD/quant_results_200.csv"
+    csv_filename=os.path.join(cwd, "quant_results_200.csv")
 ): 
     """
     Trains a model using quantization techniques (QAT and PTQ) only if results do not already exist.
@@ -104,9 +106,10 @@ def main():
     # ------------------------------
     # Global Configuration
     # ------------------------------
+    DATASET = [("/ImageNet/train200", "/ImageNet/valid")]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_dir = "/home/ida01/ew2218/QKD/ImageNet/train200"
-    val_dir = "/home/ida01/ew2218/QKD/ImageNet/valid"
+    train_dir = os.path.join(cwd, "ImageNet/train200")
+    val_dir = os.path.join(cwd, "ImageNet/valid")
     batch_size = 64
     num_workers = 16
     
