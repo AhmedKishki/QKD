@@ -121,12 +121,49 @@ def get_data_loaders(train_dir, val_dir, batch_size, num_workers=4):
 
     return train_loader, val_loader
 ############################################################################################
-def distillation_loss(student_logits, teacher_logits, temperature):
-    """Computes the KL divergence loss between the softened student and teacher logits."""
+def kl_loss(student_logits, teacher_logits, temperature):
+    """
+    Computes the Kullback-Leibler (KL) divergence loss between the softened
+    logits of the student and teacher models. This loss helps the student model
+    to mimic the teacher's output distribution (soft labels) during knowledge distillation.
+
+    The logits are softened by scaling with a temperature parameter. A higher temperature
+    produces a softer probability distribution over classes, which can carry more information
+    about the inter-class similarities.
+
+    Args:
+        student_logits (Tensor): The output logits from the student model (before softmax).
+        teacher_logits (Tensor): The output logits from the teacher model (before softmax).
+        temperature (float): The temperature scaling parameter. Higher values lead to softer
+                             probability distributions.
+
+    Returns:
+        Tensor: The KL divergence loss between the softened student and teacher outputs,
+                scaled by the square of the temperature.
+    """
     student_log_probs = F.log_softmax(student_logits / temperature, dim=1)
     teacher_probs = F.softmax(teacher_logits / temperature, dim=1)
-    loss = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean') * (temperature ** 2)
-    return loss
+    loss = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean')
+    return loss * ( temperature ** 2 )
+############################################################################################
+def cs_loss(student_logits, teacher_logits, temperature):
+    """
+    Computes the cosine similarity loss between the softmax outputs of student and teacher logits,
+    applying temperature scaling to soften the distributions. The loss is defined as 1 minus the
+    cosine similarity of the two probability distributions (averaged over the batch), and then scaled by T².
+
+    Args:
+        student_logits (Tensor): Logits output from the student model.
+        teacher_logits (Tensor): Logits output from the teacher model.
+        temperature (float): Temperature for scaling the logits in the softmax.
+
+    Returns:
+        Tensor: The computed cosine similarity loss.
+    """
+    student_prob = F.softmax(student_logits / temperature, dim=1)
+    teacher_prob = F.softmax(teacher_logits / temperature, dim=1)
+    loss = 1 - F.cosine_similarity(student_prob, teacher_prob, dim=1).mean()
+    return loss * (temperature ** 2)
 ############################################################################################
 def post_training_quantization(model, data_loader, device, num_calibration_samples=100):
     """
@@ -225,12 +262,7 @@ def quantization_aware_training(model, train_loader, device, num_epochs, max_lr=
     print("Quantization-Aware Training completed and model converted using FX Graph Mode.")
 
     return model_fx
-############################################################################################
-def alpha_scheduler(epoch, total_epochs, max_alpha=1.0, min_alpha=0.2):
-    """Smooth transition from heavy KD reliance to balanced training."""
-    return min_alpha + (max_alpha - min_alpha) * (0.5 * (1 + math.cos(math.pi * epoch / total_epochs)))
-############################################################################################
-def temperature_scheduler(epoch, total_epochs, max_T=10.0, min_T=2.0):
+
     """Soft teacher guidance early, sharper later."""
     decay_factor = (min_T / max_T) ** (epoch / total_epochs)
     return max_T * decay_factor
@@ -240,6 +272,7 @@ def quantization_knowledge_distillation(
     teacher,
     train_loader,
     device,
+    kd_loss='KL',
     num_epochs_selfstudying=5,
     num_epochs_costudying=5,
     num_epochs_tutoring=5,
@@ -255,6 +288,13 @@ def quantization_knowledge_distillation(
     Implements Self-Studying, Co-Studying, and Tutoring for quantization-aware knowledge distillation.
     QKD: Quantization-aware Knowledge Distillation
     """
+    if kd_loss == 'KL':
+        kd_loss_fn = kl_loss
+    elif kd_loss == 'CS':
+        kd_loss = cs_loss
+    else:
+        raise ValueError(f"Invalid KD loss function: {kd_loss}")
+                         
     num_epochs = num_epochs_selfstudying + num_epochs_costudying + num_epochs_tutoring
  
     # Set up QAT configuration using FX Graph Mode
@@ -323,21 +363,13 @@ def quantization_knowledge_distillation(
 
             # Compute student losses
             s_ce_loss = F.cross_entropy(student_outputs, labels)
-            s_kd_loss = F.kl_div(
-                F.log_softmax(student_outputs / temperature, dim=1),
-                F.softmax(teacher_outputs.detach() / temperature, dim=1),
-                reduction='batchmean'
-            ) * (temperature ** 2)
+            s_kd_loss = kd_loss(student_outputs, teacher_outputs.detach(), temperature)
 
             student_loss = alpha_s * s_kd_loss + (1 - alpha_s) * s_ce_loss
 
             # Compute teacher losses
             t_ce_loss = F.cross_entropy(teacher_outputs, labels)
-            t_kd_loss = F.kl_div(
-                F.log_softmax(teacher_outputs / temperature, dim=1),
-                F.softmax(student_outputs.detach() / temperature, dim=1),
-                reduction='batchmean'
-            ) * (temperature ** 2)
+            t_kd_loss = kd_loss_fn(teacher_outputs, student_outputs.detach(), temperature)
 
             teacher_loss = alpha_t * t_kd_loss + (1 - alpha_t) * t_ce_loss
 
@@ -394,11 +426,7 @@ def quantization_knowledge_distillation(
             student_outputs = student(inputs)
 
             s_ce_loss = F.cross_entropy(student_outputs, labels)
-            s_kd_loss = F.kl_div(
-                F.log_softmax(student_outputs / temperature, dim=1),
-                F.softmax(teacher_outputs.detach() / temperature, dim=1),
-                reduction='batchmean'
-            ) * (temperature ** 2)
+            s_kd_loss = kd_loss_fn(student_outputs, teacher_outputs.detach(), temperature)
 
             student_loss = alpha_s * s_kd_loss + (1 - alpha_s) * s_ce_loss
 
