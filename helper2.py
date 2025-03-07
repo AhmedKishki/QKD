@@ -411,7 +411,7 @@ def quantization_knowledge_distillation(
     teacher.eval()
 
     for epoch in range(num_epochs_tutoring):
-        running_s_ce_loss, running_s_kd_loss = 0.0, 0.0
+        running_s_loss, running_s_ce_loss, running_s_kd_loss = 0.0, 0.0, 0.0
 
         progress_bar = tqdm(train_loader, desc=f"Tutoring - Epoch {epoch+1}/{num_epochs_tutoring}", unit="batch")
         for step, (inputs, labels) in enumerate(progress_bar):
