@@ -291,7 +291,7 @@ def quantization_knowledge_distillation(
     if kd_loss == 'KL':
         kd_loss_fn = kl_loss
     elif kd_loss == 'CS':
-        kd_loss = cs_loss
+        kd_loss_fn = cs_loss
     else:
         raise ValueError(f"Invalid KD loss function: {kd_loss}")
                          

@@ -83,7 +83,7 @@ def train_quantized_student_with_teacher(
         student=student,
         teacher=teacher,
         train_loader=train_loader,
-        kd_loss='CS',
+        kd_loss=kd_loss,
         num_epochs_selfstudying=num_epochs_selfstudying,
         num_epochs_costudying=num_epochs_costudying,
         num_epochs_tutoring=num_epochs_tutoring,
