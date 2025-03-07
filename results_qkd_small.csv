@@ -16,3 +16,4 @@ mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,5-10-10,"top1: 50.21, t
 mobilenet_v3_small,mobilenet_v3_small,"t:0.3, s:0.7",6.0,5-10-10,"top1: 53.45, top5: 77.64"
 mobilenet_v3_small,mobilenet_v3_small,"t:0.7, s:0.3",6.0,5-10-10,"top1: 50.11, top5: 73.67"
 mobilenet_v3_small,mobilenet_v3_small,"t:0.3, s:1.0",6.0,5-10-10,"top1: 50.85, top5: 76.64"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.0",6.0,4-4-4,"top1: 49.85, top5: 73.60"
