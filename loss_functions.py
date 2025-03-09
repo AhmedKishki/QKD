@@ -1,4 +1,4 @@
-from torch.nn.functional import kl_div, log_softmax, softmax, cosine_similarity, normalize, mse_loss
+import torch.nn.functional as F
 
 def kl_loss(student_logits, teacher_logits, temperature):
     """
@@ -20,9 +20,9 @@ def kl_loss(student_logits, teacher_logits, temperature):
         Tensor: The KL divergence loss between the softened student and teacher outputs,
                 scaled by the square of the temperature.
     """
-    student_log_probs = log_softmax(student_logits / temperature, dim=1)
-    teacher_probs = softmax(teacher_logits / temperature, dim=1)
-    loss = kl_div(student_log_probs, teacher_probs, reduction='batchmean')
+    student_log_probs = F.log_softmax(student_logits / temperature, dim=1)
+    teacher_probs = F.softmax(teacher_logits / temperature, dim=1)
+    loss = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean')
     return loss * ( temperature ** 2 )
 
 def cs_loss(student_logits, teacher_logits, temperature):
@@ -39,22 +39,15 @@ def cs_loss(student_logits, teacher_logits, temperature):
     Returns:
         Tensor: The computed cosine similarity loss.
     """
-    student_prob = softmax(student_logits / temperature, dim=1)
-    teacher_prob = softmax(teacher_logits / temperature, dim=1)
-    loss = 1 - cosine_similarity(student_prob, teacher_prob, dim=1).mean()
+    student_prob = F.softmax(student_logits / temperature, dim=1)
+    teacher_prob = F.softmax(teacher_logits / temperature, dim=1)
+    loss = 1 - F.cosine_similarity(student_prob, teacher_prob, dim=1).mean()
     return loss * (temperature ** 2)
 
 def ms_loss(student_logits, teacher_logits, temperature):
     """
     Computes a mean squared error (MSE) loss between attention maps derived from the
     student and teacher logits, using temperature scaling.
-
-    The process is as follows:
-    1. Scale the logits by the temperature.
-    2. Compute an "attention" map by squaring the scaled logits.
-    3. Normalize the attention maps across the class dimension.
-    4. Compute the MSE loss between the normalized attention maps.
-    5. Scale the loss by T² to counteract the temperature effect.
 
     Args:
         student_logits (Tensor): Logits from the student model with shape [B, C].
@@ -64,12 +57,18 @@ def ms_loss(student_logits, teacher_logits, temperature):
     Returns:
         Tensor: The computed MSE loss.
     """
-    # Temperature scaling
     student_scaled = student_logits / temperature
     teacher_scaled = teacher_logits / temperature
     student_attention = student_scaled ** 2
     teacher_attention = teacher_scaled ** 2
-    student_attention = normalize(student_attention, p=2, dim=1)
-    teacher_attention = normalize(teacher_attention, p=2, dim=1)
-    loss = mse_loss(student_attention, teacher_attention)
+    student_attention = F.normalize(student_attention, p=2, dim=1)
+    teacher_attention = F.normalize(teacher_attention, p=2, dim=1)
+    loss = F.mse_loss(student_attention, teacher_attention)
     return loss * (temperature ** 2)
+
+def combined_loss(kd_loss_fn, student_logits, teacher_logits, labels, alpha, temperature):
+    ce_loss = F.cross_entropy(student_logits, labels)
+    if teacher_logits is None:
+        return ce_loss
+    kd_loss = kd_loss_fn(student_logits, teacher_logits.detach(), temperature)
+    return (1 - alpha) * ce_loss + alpha * kd_loss

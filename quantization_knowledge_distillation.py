@@ -5,122 +5,136 @@ from torch.ao.quantization.quantize_fx import prepare_qat_fx, convert_fx
 from torch.ao.quantization import get_default_qat_qconfig_mapping
 from tqdm import tqdm
 
-from loss_functions import kl_loss, cs_loss, ms_loss
+from loss_functions import kl_loss, cs_loss, ms_loss, combined_loss
 
 
-def phase_training(phase: str,
-                   num_epochs: int,
-                   student: torch.nn.Module,
-                   teacher: torch.nn.Module,
-                   train_loader,
-                   device,
-                   optimizer_student: optim.Optimizer,
-                   optimizer_teacher: optim.Optimizer,
-                   scheduler_student: torch.optim.lr_scheduler.LambdaLR,
-                   kd_loss_fn,
-                   alpha_s: float,
-                   alpha_t: float,
-                   temperature: float,
-                   log_interval: int):
+def selfstudying_phase(num_epochs, student, train_loader, device,
+                       optimizer_student, scheduler_student, log_interval):
     """
-    Trains for a given number of epochs using a mode determined by `phase`:
-      - 'selfstudying': Only the student is updated using cross-entropy loss.
-      - 'costudying': Both student and teacher are updated with cross-entropy and KD losses.
-      - 'tutoring': Only the student is updated (teacher in eval mode) using KD loss.
+    Selfstudying phase:
+    - Only the student is updated using cross-entropy loss.
     """
-    if phase == 'selfstudying':
-        student.train()
-        teacher.eval()  # Teacher is not used in self-studying
-    elif phase == 'costudying':
-        student.train()
-        teacher.train()
-    elif phase == 'tutoring':
-        student.train()
-        teacher.eval()
-    else:
-        raise ValueError("Invalid phase. Choose 'selfstudying', 'costudying', or 'tutoring'.")
-
+    student.train()
     for epoch in range(num_epochs):
-        running_s_loss = 0.0
-        running_t_loss = 0.0  # Only used during co-studying
-
-        progress_bar = tqdm(train_loader, desc=f"{phase.capitalize()} Phase - Epoch {epoch+1}/{num_epochs}", unit="batch")
+        running_loss = 0.0
+        progress_bar = tqdm(train_loader,
+                            desc=f"Selfstudying Phase - Epoch {epoch+1}/{num_epochs}",
+                            unit="batch")
         for step, (inputs, labels) in enumerate(progress_bar):
             inputs, labels = inputs.to(device), labels.to(device)
-            
-            if phase == 'costudying':
-                # Zero gradients for both student and teacher
-                optimizer_student.zero_grad()
-                optimizer_teacher.zero_grad()
-                
-                teacher_outputs = teacher(inputs)
-                student_outputs = student(inputs)
+            optimizer_student.zero_grad()
 
-                # Student losses
-                s_ce_loss = F.cross_entropy(student_outputs, labels)
-                s_kd_loss = kd_loss_fn(student_outputs, teacher_outputs.detach(), temperature)
-                student_loss = alpha_s * s_kd_loss + (1 - alpha_s) * s_ce_loss
+            outputs = student(inputs)
+            loss = F.cross_entropy(outputs, labels)
+            loss.backward()
+            optimizer_student.step()
 
-                # Teacher losses
-                t_ce_loss = F.cross_entropy(teacher_outputs, labels)
-                t_kd_loss = kd_loss_fn(teacher_outputs, student_outputs.detach(), temperature)
-                teacher_loss = alpha_t * t_kd_loss + (1 - alpha_t) * t_ce_loss
-
-                student_loss.backward()
-                optimizer_student.step()
-                
-                teacher_loss.backward()
-                optimizer_teacher.step()
-
-                running_s_loss += student_loss.item()
-                running_t_loss += teacher_loss.item()
-
-                if (step + 1) % log_interval == 0:
-                    progress_bar.set_postfix({
-                        "S_loss": f"{running_s_loss / (step + 1):.4f}",
-                        "T_loss": f"{running_t_loss / (step + 1):.4f}"
-                    })
-            elif phase == 'tutoring':
-                optimizer_student.zero_grad()
-
-                # Teacher in evaluation mode (no gradients)
-                with torch.no_grad():
-                    teacher_outputs = teacher(inputs)
-                student_outputs = student(inputs)
-
-                s_ce_loss = F.cross_entropy(student_outputs, labels)
-                s_kd_loss = kd_loss_fn(student_outputs, teacher_outputs.detach(), temperature)
-                student_loss = alpha_s * s_kd_loss + (1 - alpha_s) * s_ce_loss
-
-                student_loss.backward()
-                optimizer_student.step()
-
-                running_s_loss += student_loss.item()
-
-                if (step + 1) % log_interval == 0:
-                    progress_bar.set_postfix({
-                        "S_loss": f"{running_s_loss / (step + 1):.4f}"
-                    })
-            elif phase == 'selfstudying':
-                optimizer_student.zero_grad()
-                student_outputs = student(inputs)
-                s_ce_loss = F.cross_entropy(student_outputs, labels)
-                s_ce_loss.backward()
-                optimizer_student.step()
-
-                running_s_loss += s_ce_loss.item()
-
-                if (step + 1) % log_interval == 0:
-                    progress_bar.set_postfix({
-                        "S_CE_loss": f"{running_s_loss / (step + 1):.4f}"
-                    })
+            running_loss += loss.item()
+            if (step + 1) % log_interval == 0:
+                progress_bar.set_postfix({
+                    "S_CE_loss": f"{running_loss / (step + 1):.4f}"
+                })
 
         scheduler_student.step()
+        print(f"Selfstudying - Epoch [{epoch+1}/{num_epochs}] - S_loss: {running_loss / len(train_loader):.4f}")
 
-        if phase == 'costudying':
-            print(f"{phase.capitalize()} - Epoch [{epoch+1}/{num_epochs}] - S_loss: {running_s_loss / len(train_loader):.4f} | T_loss: {running_t_loss / len(train_loader):.4f}")
-        elif phase in ['tutoring', 'selfstudying']:
-            print(f"{phase.capitalize()} - Epoch [{epoch+1}/{num_epochs}] - S_loss: {running_s_loss / len(train_loader):.4f}")
+
+def costudying_phase(num_epochs, student, teacher, train_loader, device,
+                     optimizer_student, optimizer_teacher, scheduler_student,
+                     kd_loss_fn, alpha_s, alpha_t, temperature, log_interval):
+    """
+    Co-studying phase:
+    - Both student and teacher are updated.
+    - Student and teacher losses are a combination of cross-entropy and KD losses.
+    """
+    student.train()
+    teacher.train()
+    for epoch in range(num_epochs):
+        running_s_loss = 0.0
+        running_t_loss = 0.0
+
+        progress_bar = tqdm(train_loader,
+                            desc=f"Costudying Phase - Epoch {epoch+1}/{num_epochs}",
+                            unit="batch")
+        for step, (inputs, labels) in enumerate(progress_bar):
+            inputs, labels = inputs.to(device), labels.to(device)
+
+            optimizer_student.zero_grad()
+            optimizer_teacher.zero_grad()
+
+            teacher_outputs = teacher(inputs)
+            student_outputs = student(inputs)
+
+            # Student losses
+            s_ce_loss = F.cross_entropy(student_outputs, labels)
+            s_kd_loss = kd_loss_fn(student_outputs, teacher_outputs.detach(), temperature)
+            student_loss = alpha_s * s_kd_loss + (1 - alpha_s) * s_ce_loss
+
+            # Teacher losses
+            t_ce_loss = F.cross_entropy(teacher_outputs, labels)
+            t_kd_loss = kd_loss_fn(teacher_outputs, student_outputs.detach(), temperature)
+            teacher_loss = alpha_t * t_kd_loss + (1 - alpha_t) * t_ce_loss
+
+            student_loss.backward()
+            optimizer_student.step()
+
+            teacher_loss.backward()
+            optimizer_teacher.step()
+
+            running_s_loss += student_loss.item()
+            running_t_loss += teacher_loss.item()
+
+            if (step + 1) % log_interval == 0:
+                progress_bar.set_postfix({
+                    "S_loss": f"{running_s_loss / (step + 1):.4f}",
+                    "T_loss": f"{running_t_loss / (step + 1):.4f}"
+                })
+
+        scheduler_student.step()
+        print(f"Costudying - Epoch [{epoch+1}/{num_epochs}] - "
+              f"S_loss: {running_s_loss / len(train_loader):.4f} | "
+              f"T_loss: {running_t_loss / len(train_loader):.4f}")
+
+
+def tutoring_phase(num_epochs, student, teacher, train_loader, device,
+                   optimizer_student, scheduler_student, kd_loss_fn, alpha_s,
+                   temperature, log_interval):
+    """
+    Tutoring phase:
+    - Only the student is updated.
+    - Teacher is in evaluation mode (no gradients).
+    - Student is trained with KD loss and cross-entropy loss.
+    """
+    student.train()
+    teacher.eval()
+    for epoch in range(num_epochs):
+        running_loss = 0.0
+        progress_bar = tqdm(train_loader,
+                            desc=f"Tutoring Phase - Epoch {epoch+1}/{num_epochs}",
+                            unit="batch")
+        for step, (inputs, labels) in enumerate(progress_bar):
+            inputs, labels = inputs.to(device), labels.to(device)
+            optimizer_student.zero_grad()
+
+            with torch.no_grad():
+                teacher_outputs = teacher(inputs)
+            student_outputs = student(inputs)
+
+            s_ce_loss = F.cross_entropy(student_outputs, labels)
+            s_kd_loss = kd_loss_fn(student_outputs, teacher_outputs.detach(), temperature)
+            student_loss = alpha_s * s_kd_loss + (1 - alpha_s) * s_ce_loss
+
+            student_loss.backward()
+            optimizer_student.step()
+
+            running_loss += student_loss.item()
+            if (step + 1) % log_interval == 0:
+                progress_bar.set_postfix({
+                    "S_loss": f"{running_loss / (step + 1):.4f}"
+                })
+
+        scheduler_student.step()
+        print(f"Tutoring - Epoch [{epoch+1}/{num_epochs}] - S_loss: {running_loss / len(train_loader):.4f}")
 
 
 def quantization_knowledge_distillation(
@@ -141,13 +155,13 @@ def quantization_knowledge_distillation(
     log_interval=100
 ):
     """
-    Implements Quantization-Aware Knowledge Distillation (QKD) by sequentially running
-    self-studying, co-studying, and tutoring phases using a common training function.
+    Implements Quantization-Aware Knowledge Distillation (QKD) by running
+    selfstudying, costudying, and tutoring phases sequentially.
     """
     # Select KD loss function
     if kd_loss == 'KL':
         kd_loss_fn = kl_loss
-        kd_loss_label = "Kullback-Leibler (KL) Divergence"
+        kd_loss_label = "Kullback-Leibler Divergence (KL)"
     elif kd_loss == 'CS':
         kd_loss_fn = cs_loss
         kd_loss_label = "Cosine Similarity (CS)"
@@ -162,7 +176,7 @@ def quantization_knowledge_distillation(
 
     # Set up QAT configuration using FX Graph Mode
     qconfig_mapping = get_default_qat_qconfig_mapping("x86")
-    example_inputs = next(iter(train_loader))[0]  # Sample input for tracing
+    example_inputs = next(iter(train_loader))[0]
     student = prepare_qat_fx(student, qconfig_mapping, example_inputs)
 
     student.to(device)
@@ -177,20 +191,16 @@ def quantization_knowledge_distillation(
         lr_lambda=lambda epoch: (min_lr / max_lr) ** (epoch / (total_epochs - 1))
     )
 
-    # Execute all phases sequentially using the common phase_training function
-    phase_training('selfstudying', num_epochs_selfstudying, student, teacher, train_loader, device,
-                   optimizer_student, optimizer_teacher, scheduler_student, kd_loss_fn,
-                   alpha_s, alpha_t, temperature, log_interval)
-    
-    phase_training('costudying', num_epochs_costudying, student, teacher, train_loader, device,
-                   optimizer_student, optimizer_teacher, scheduler_student, kd_loss_fn,
-                   alpha_s, alpha_t, temperature, log_interval)
-    
-    phase_training('tutoring', num_epochs_tutoring, student, teacher, train_loader, device,
-                   optimizer_student, optimizer_teacher, scheduler_student, kd_loss_fn,
-                   alpha_s, alpha_t, temperature, log_interval)
-        
-    # Convert to quantized inference format
+    selfstudying_phase(num_epochs_selfstudying, student, train_loader, device,
+                       optimizer_student, scheduler_student, log_interval)
+
+    costudying_phase(num_epochs_costudying, student, teacher, train_loader, device,
+                     optimizer_student, optimizer_teacher, scheduler_student,
+                     kd_loss_fn, alpha_s, alpha_t, temperature, log_interval)
+
+    tutoring_phase(num_epochs_tutoring, student, teacher, train_loader, device,
+                   optimizer_student, scheduler_student, kd_loss_fn, alpha_s, temperature, log_interval)
+
     student.to('cpu')
     student.eval()
     student = convert_fx(student)
