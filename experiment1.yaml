@@ -3,6 +3,8 @@ experiment1:
     - "CS"
     - "KL"
     - "MS"
+    - "TV"
+    - "JS"
   alpha_st_pairs:
     - [0.5, 0.5]
     - [1.0, 0.5]
@@ -10,7 +12,6 @@ experiment1:
     - [0.0, 0.5]
   student_teacher_pairs:
     - ["mobilenet_v3_small", "mobilenet_v3_small"]
-    - ["resnet18", "resnet18"]
   temperatures:
     - 6.0
   num_epochs:
@@ -24,3 +25,8 @@ experiment1:
   max_lr: 1e-3
   min_lr: 1e-6
   teacher_lr: 1e-6
+  device: "cuda"
+  batch_size: 64
+  num_workers: 16
+  traindir: "imageNet/train200"
+  validdir: "imageNet/valid"

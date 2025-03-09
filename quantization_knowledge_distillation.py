@@ -1,3 +1,4 @@
+import argparse
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -5,8 +6,7 @@ from torch.ao.quantization.quantize_fx import prepare_qat_fx, convert_fx
 from torch.ao.quantization import get_default_qat_qconfig_mapping
 from tqdm import tqdm
 
-from loss_functions import kl_loss, cs_loss, ms_loss, combined_loss
-
+from loss_functions import kl_loss, cs_loss, ms_loss, js_loss, tv_loss
 
 def selfstudying_phase(num_epochs, student, train_loader, device,
                        optimizer_student, scheduler_student, log_interval):
@@ -168,6 +168,12 @@ def quantization_knowledge_distillation(
     elif kd_loss == 'MS':
         kd_loss_fn = ms_loss
         kd_loss_label = "Mean Squared Error (MS)"
+    elif kd_loss == 'JS':
+        kd_loss_fn = js_loss
+        kd_loss_label = "Jensen-Shannon Divergence (JS)"
+    elif kd_loss == 'TV':
+        kd_loss_fn = tv_loss
+        kd_loss_label = "Total Variation (TV)"
     else:
         raise ValueError(f"Invalid KD loss function: {kd_loss}")
 

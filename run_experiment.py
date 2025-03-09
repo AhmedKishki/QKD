@@ -1,57 +1,73 @@
-#!/usr/bin/env python
-
-import sys
+import argparse
 import yaml
 
-def process_experiment(experiment_config):
-    # Obtain the list of kd_loss values
-    kd_loss = experiment_config.get("kd_loss", [])
-    
-    # Process alpha_st_pairs: split into alpha_s and alpha_t
-    alpha_st_pairs = experiment_config.get("alpha_st_pairs", [])
-    
-    # Preserve student_teacher_pairs as intact pairs
-    student_teacher_pairs = experiment_config.get("student_teacher_pairs", [])
-    
-    # Get temperatures list
-    temperatures = experiment_config.get("temperatures", [])
-    
-    # Keep num_epochs as triples without splitting
-    num_epochs = experiment_config.get("num_epochs", [])
-    
-    # Other hyperparameters
-    max_lr = experiment_config.get("max_lr")
-    min_lr = experiment_config.get("min_lr")
-    teacher_lr = experiment_config.get("teacher_lr")
-    
-    # Print out the extracted parameters
-    print("kd_loss:", kd_loss)
-    print("alpha_st_pairs:", alpha_st_pairs)
-    print("student_teacher_pairs:", student_teacher_pairs)
-    print("temperatures:", temperatures)
-    print("num_epochs_triples:", num_epochs)
-    print("max_lr:", max_lr)
-    print("min_lr:", min_lr)
-    print("teacher_lr:", teacher_lr)
-    print()
+from quantization_knowledge_distillation import quantization_knowledge_distillation
+from evaluation import evaluate_model_quantized
+from helper import get_model, get_data_loaders, check_config_csv, save_results_csv
 
-def main(yaml_file):
-    try:
-        with open(yaml_file, "r") as file:
-            config = yaml.safe_load(file)
-    except Exception as e:
-        print(f"Error loading YAML file: {e}")
-        sys.exit(1)
+def main():
+    parser = argparse.ArgumentParser(description="Run Quantization Knowledge Distillation from YAML config")
+    parser.add_argument('--config', type=str, required=True, help="Path to YAML configuration file")
+    args = parser.parse_args()
     
-    # Iterate over each experiment in the configuration
-    for experiment_name, experiment_config in config.items():
-        print(f"--- Running {experiment_name} ---")
-        process_experiment(experiment_config)
+    # Load YAML file
+    with open(args.config, 'r') as file:
+        config = yaml.safe_load(file)
+    
+    experiment = config.get('experiment1', {})
+    
+    kd_losses = experiment.get('kd_loss', [])
+    alpha_st_pairs = experiment.get('alpha_st_pairs', [])
+    student_teacher_pairs = experiment.get('student_teacher_pairs', [])
+    temperatures = experiment.get('temperatures', [6.0])
+    num_epochs_list = experiment.get('num_epochs', [])
+    max_lr = experiment.get('max_lr', 1e-3)
+    min_lr = experiment.get('min_lr', 1e-6)
+    teacher_lr = experiment.get('teacher_lr', 1e-6)
+    device = experiment.get('device', 'cuda')
+    batch_size = experiment.get('batch_size', 64)
+    num_workers = experiment.get('num_workers', 16)
+    train_dir = experiment.get('traindir', 'imageNet/train200')
+    val_dir = experiment.get('validdir', 'imageNet/valid')
+    
+    for student_name, teacher_name in student_teacher_pairs:
+        student = get_model(student_name)
+        teacher = get_model(teacher_name)
+        for kd_loss in kd_losses:
+            for alpha_s, alpha_t in alpha_st_pairs:
+                for temperature in temperatures:
+                    for num_epochs in num_epochs_list:
+                        num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring = num_epochs
+                        
+                        if check_config_csv(csv_path, teacher_name, student_name, alpha_t, alpha_s, temperature, num_epochs):
+                            print(f"Skipping {student_name} -> {teacher_name}, Alpha: ({alpha_s}, {alpha_t}), Temp: {temperature}")
+                            continue
+                        
+                        csv_path = f"results_qkd_{kd_loss}.csv"
+                        train_loader, valid_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
+
+                        print(f"Running KD with {student_name} -> {teacher_name}, KD Loss: {kd_loss}, Alpha: ({alpha_s}, {alpha_t}), Temp: {temperature}")
+                        
+                        student = quantization_knowledge_distillation(
+                            student=student,
+                            teacher=teacher,
+                            train_loader=train_loader,
+                            device=device,
+                            kd_loss=kd_loss,
+                            num_epochs_selfstudying=num_epochs_selfstudying,
+                            num_epochs_costudying=num_epochs_costudying,
+                            num_epochs_tutoring=num_epochs_tutoring,
+                            max_lr=max_lr,
+                            min_lr=min_lr,
+                            teacher_lr=teacher_lr,
+                            alpha_s=alpha_s,
+                            alpha_t=alpha_t,
+                            temperature=temperature,
+                            log_interval=100
+                        )
+                        
+                        accuracy = evaluate_model_quantized(student, valid_loader)
+                        save_results_csv(csv_path, teacher_name, student_name, alpha_s, alpha_t, temperature, num_epochs, accuracy)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python run_experiments.py <path_to_yaml_file>")
-        sys.exit(1)
-    
-    yaml_file = sys.argv[1]
-    main(yaml_file)
+    main()
