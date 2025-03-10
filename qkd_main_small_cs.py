@@ -61,7 +61,7 @@ def train_quantized_student_with_teacher(
     """
     Trains a student model using quantized knowledge distillation from a teacher model.
     """
-    csv_filename = os.path.join(cwd, "qkdcs_results_small.csv")
+    csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_small.csv")
 
     # Check if experiment already exists
     if check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
@@ -127,24 +127,24 @@ def main():
     # ------------------------------
     # Experiment 1 Hyperparameters
     # ------------------------------
-    kd_loss = 'CS'
-    alpha_st_pairs = [(0.5,0.5),(1.0,0.5),(0.7,0.3),(0.0,0.5)]
-    temperatures = [6.0,2.0,10.0]
-    num_epochs = [(4,4,4),(6,3,3),(3,6,3),(3,3,6),(6,6,0),(0,6,6),(0,12,0)]
-    max_lr = 1e-3
-    min_lr = 1e-6
-    teacher_lr = 1e-6
+    # kd_loss = 'CS'
+    # alpha_st_pairs = [(0.5,0.5),(1.0,0.5),(0.7,0.3),(0.0,0.5)]
+    # temperatures = [6.0,2.0,10.0]
+    # num_epochs = [(4,4,4),(6,3,3),(3,6,3),(3,3,6),(6,6,0),(0,6,6),(0,12,0)]
+    # max_lr = 1e-3
+    # min_lr = 1e-6
+    # teacher_lr = 1e-6
     
     # ------------------------------
     # Experiment 2 Hyperparameters
     # ------------------------------
-    
-    # alpha_st_pairs = [(0.5,0.0),(1.0,0.0),(0.7,0.0)]
-    # temperatures = [6.0]
-    # num_epochs = [(15,0,15),(0,0,30)]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
+    kd_loss_labels = ['CS', 'KL', 'JS', 'TV']
+    alpha_st_pairs = [(0.7,0.3)]
+    temperatures = [6.0]
+    num_epochs = [(20,0,0),(0,20,0),(0,0,20),(0,15,5),(5,0,15),(15,0,5),(0,5,15)]
+    max_lr = 1e-3
+    min_lr = 1e-6
+    teacher_lr = 1e-6
     
     # ------------------------------
     # Experiment 3 Hyperparameters
@@ -168,39 +168,37 @@ def main():
     # Define Teacher and Student Models
     # ------------------------------
     teacher_student_pairs = [
-        ('mobilenet_v3_small', 'mobilenet_v3_small'),
-        ('resnet18', 'resnet18'),
-        ('mobilenet_v3_large', 'mobilenet_v3_small')
+        ('mobilenet_v3_small', 'mobilenet_v3_small')
     ]
     
     for teacher_model_name, student_model_name in teacher_student_pairs:
         print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
         teacher = get_model(teacher_model_name, pretrained=True)
         student = get_model(student_model_name, pretrained=True)
-        
-        for num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring in num_epochs:
-            for alpha_s, alpha_t in alpha_st_pairs:
-                for temp in temperatures:
-                    print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
-                    train_quantized_student_with_teacher(
-                        kd_loss,
-                        teacher,
-                        student,
-                        teacher_model_name,
-                        student_model_name,
-                        train_loader,
-                        val_loader,
-                        alpha_s,
-                        alpha_t,
-                        temp,
-                        num_epochs_selfstudying,
-                        num_epochs_costudying,
-                        num_epochs_tutoring,
-                        device,
-                        max_lr,
-                        min_lr,
-                        teacher_lr
-                    )
+        for kd_loss in kd_loss_labels:
+            for num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring in num_epochs:
+                for alpha_s, alpha_t in alpha_st_pairs:
+                    for temp in temperatures:
+                        print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
+                        train_quantized_student_with_teacher(
+                            kd_loss,
+                            teacher,
+                            student,
+                            teacher_model_name,
+                            student_model_name,
+                            train_loader,
+                            val_loader,
+                            alpha_s,
+                            alpha_t,
+                            temp,
+                            num_epochs_selfstudying,
+                            num_epochs_costudying,
+                            num_epochs_tutoring,
+                            device,
+                            max_lr,
+                            min_lr,
+                            teacher_lr
+                        )
 
 if __name__ == "__main__":
     main()
