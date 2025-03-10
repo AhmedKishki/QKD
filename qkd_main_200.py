@@ -130,15 +130,25 @@ def main():
     kd_loss_labels = ['CS', 'KL', 'JS', 'TV']
     alpha_st_pairs = [(0.5,0.5),(0.7,0.3),(1.0,0.5)]
     temperatures = [6.0]
-    num_epochs = [(10,10,10),(20,5,5),(5,20,5),(5,5,20),(0,15,15),(15,15,0),(0,30,0)]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
+    num_epochs = [(10,10,10),
+                  (20,5,5),
+                  (5,20,5),
+                  (5,5,20),
+                  (0,15,15),
+                  (15,15,0),
+                  (0,30,0),
+                  (0,5,25),
+                  (0,25,5),
+                  (5,25,0),
+                  (25,5,0)]
     
     # ------------------------------
     # Experiment 2 Hyperparameters
     # ------------------------------
-    # kd_loss_labels = ['CS', 'KL', 'JS', 'TV', 'MS']
+    # kd_loss_labels = ['CS', 'KL', 'JS', 'TV']
     # alpha_st_pairs = [(0.7,0.3)]
     # temperatures = [6.0]
     # max_lr = 1e-3
@@ -184,7 +194,7 @@ def main():
     teacher_student_pairs = [
         ('mobilenet_v3_small', 'mobilenet_v3_small')
     ]
-    
+
     for teacher_model_name, student_model_name in teacher_student_pairs:
         print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
         teacher = get_model(teacher_model_name, pretrained=True)
