@@ -195,6 +195,60 @@ def ms_loss(student_logits, teacher_logits, temperature):
     loss = F.mse_loss(student_attention, teacher_attention)
     return loss * (temperature ** 2)
 ############################################################################################
+def js_loss(student_logits, teacher_logits, temperature):
+    """
+    Computes Jensen-Shannon Divergence (JS) loss between the student and teacher models.
+
+    JSD measures the similarity between two probability distributions and is a symmetric,
+    numerically stable alternative to KL divergence.
+
+    Args:
+        student_logits (Tensor): Logits from the student model with shape [B, C].
+        teacher_logits (Tensor): Logits from the teacher model with shape [B, C].
+        temperature (float): Temperature for scaling the logits.
+        eps (float, optional): Small constant to prevent log(0) issues. Default is 1e-8.
+
+    Returns:
+        Tensor: The computed JSD loss.
+    
+    Notes:
+        - The `0.5` factor is necessary because JSD is defined as the average of two KL divergences.
+        - `teacher_logits` is detached to prevent unnecessary gradient computation.
+        - `torch.clamp(mean_probs, min=eps)` prevents log(0) issues in KL divergence.
+    """
+    student_probs = F.softmax(student_logits / temperature, dim=1)
+    teacher_probs = F.softmax(teacher_logits.detach() / temperature, dim=1)
+    mean_probs = 0.5 * (student_probs + teacher_probs)
+    mean_probs = torch.clamp(mean_probs, min=1e-9)
+    loss = 0.5 * F.kl_div(F.log_softmax(student_logits / temperature, dim=1), mean_probs, reduction='batchmean') + \
+           0.5 * F.kl_div(F.log_softmax(teacher_logits.detach() / temperature, dim=1), mean_probs, reduction='batchmean')
+    return loss
+############################################################################################
+def tv_loss(student_logits, teacher_logits, temperature):
+    """
+    Computes the Total Variation (TV) loss between the student and teacher model's
+    softmax probability distributions.
+
+    TV loss measures the absolute difference between two probability distributions.
+
+    Args:
+        student_logits (Tensor): Logits from the student model with shape [B, C].
+        teacher_logits (Tensor): Logits from the teacher model with shape [B, C].
+        temperature (float): Temperature for scaling the logits.
+
+    Returns:
+        Tensor: The computed TV loss.
+
+    Notes:
+        - Uses `softmax` to convert logits into probability distributions.
+        - `teacher_logits` is detached to avoid unnecessary gradient computation.
+        - Computes the mean absolute difference between the distributions.
+    """
+    student_probs = F.softmax(student_logits / temperature, dim=1)
+    teacher_probs = F.softmax(teacher_logits.detach() / temperature, dim=1)
+    loss = torch.mean(torch.abs(student_probs - teacher_probs))
+    return loss
+############################################################################################
 def post_training_quantization(model, data_loader, device, num_calibration_samples=100):
     """
     Post-training quantization using FX Graph Mode with limited calibration samples.
@@ -316,13 +370,19 @@ def quantization_knowledge_distillation(
     """
     if kd_loss == 'KL':
         kd_loss_fn = kl_loss
-        kd_loss_label = "Kullback-Leibler (KL) Divergence"
+        kd_loss_label = "Kullback-Leibler Divergence (KL)"
     elif kd_loss == 'CS':
         kd_loss_fn = cs_loss
         kd_loss_label = "Cosine Similarity (CS)"
     elif kd_loss == 'MS':
         kd_loss_fn = ms_loss
         kd_loss_label = "Mean Squared Error (MS)"
+    elif kd_loss == 'JS':
+        kd_loss_fn = js_loss
+        kd_loss_label = "Jensen-Shannon Divergence (JS)"
+    elif kd_loss == 'TV':
+        kd_loss_fn = tv_loss
+        kd_loss_label = "Total Variation (TV)"
     else:
         raise ValueError(f"Invalid KD loss function: {kd_loss}")
     
