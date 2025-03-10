@@ -165,6 +165,36 @@ def cs_loss(student_logits, teacher_logits, temperature):
     loss = 1 - F.cosine_similarity(student_prob, teacher_prob, dim=1).mean()
     return loss * (temperature ** 2)
 ############################################################################################
+def ms_loss(student_logits, teacher_logits, temperature):
+    """
+    Computes a mean squared error (MSE) loss between attention maps derived from the
+    student and teacher logits, using temperature scaling.
+
+    The process is as follows:
+    1. Scale the logits by the temperature.
+    2. Compute an "attention" map by squaring the scaled logits.
+    3. Normalize the attention maps across the class dimension.
+    4. Compute the MSE loss between the normalized attention maps.
+    5. Scale the loss by T² to counteract the temperature effect.
+
+    Args:
+        student_logits (Tensor): Logits from the student model with shape [B, C].
+        teacher_logits (Tensor): Logits from the teacher model with shape [B, C].
+        temperature (float): Temperature for scaling the logits.
+
+    Returns:
+        Tensor: The computed MSE loss.
+    """
+    # Temperature scaling
+    student_scaled = student_logits / temperature
+    teacher_scaled = teacher_logits / temperature
+    student_attention = student_scaled ** 2
+    teacher_attention = teacher_scaled ** 2
+    student_attention = F.normalize(student_attention, p=2, dim=1)
+    teacher_attention = F.normalize(teacher_attention, p=2, dim=1)
+    loss = F.mse_loss(student_attention, teacher_attention)
+    return loss * (temperature ** 2)
+############################################################################################
 def post_training_quantization(model, data_loader, device, num_calibration_samples=100):
     """
     Post-training quantization using FX Graph Mode with limited calibration samples.
@@ -286,13 +316,18 @@ def quantization_knowledge_distillation(
     """
     if kd_loss == 'KL':
         kd_loss_fn = kl_loss
+        kd_loss_label = "Kullback-Leibler (KL) Divergence"
     elif kd_loss == 'CS':
         kd_loss_fn = cs_loss
+        kd_loss_label = "Cosine Similarity (CS)"
+    elif kd_loss == 'MS':
+        kd_loss_fn = ms_loss
+        kd_loss_label = "Mean Squared Error (MS)"
     else:
         raise ValueError(f"Invalid KD loss function: {kd_loss}")
     
     print("\nStarting Quantization-Aware Knowledge Distillation (QKD) training.")
-    print(f"\nKD Loss: {kd_loss}")
+    print(f"\nKD Loss: {kd_loss_label}")
                          
     num_epochs = num_epochs_selfstudying + num_epochs_costudying + num_epochs_tutoring
  

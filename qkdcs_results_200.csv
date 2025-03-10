@@ -1,0 +1,12 @@
+Teacher,Student,Alpha,Temperature,Epochs,QKD Accuracy
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.5",6.0,10-10-10,"top1: 59.53, top5: 82.14"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.5",2.0,10-10-10,"top1: 59.00, top5: 81.68"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.5",10.0,10-10-10,"top1: 59.56, top5: 82.39"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,10-10-10,"top1: 60.00, top5: 83.08"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",2.0,10-10-10,"top1: 60.22, top5: 82.83"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.3, s:0.7",6.0,10-10-10,"top1: 60.45, top5: 82.91"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.0",6.0,10-10-10,"top1: 57.89, top5: 80.62"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.5",6.0,20-5-5,"top1: 57.95, top5: 80.83"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,20-5-5,"top1: 57.26, top5: 80.63"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.3, s:0.7",6.0,20-5-5,"top1: 57.64, top5: 80.81"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.0",6.0,20-5-5,"top1: 55.86, top5: 78.88"

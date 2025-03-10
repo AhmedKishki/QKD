@@ -61,7 +61,7 @@ def train_quantized_student_with_teacher(
     """
     Trains a student model using quantized knowledge distillation from a teacher model.
     """
-    csv_filename = os.path.join(cwd, "qkdcs_results_200.csv")
+    csv_filename = os.path.join(cwd, "results_qkd_200_ms.csv")
 
     # Check if experiment already exists
     if check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
@@ -127,7 +127,7 @@ def main():
     # ------------------------------
     # Experiment 1 Hyperparameters
     # ------------------------------
-    kd_loss = 'CS'
+    kd_loss = 'MS'
     alpha_st_pairs = [(0.5,0.5),(1.0,0.5),(0.7,0.3),(0.0,0.5)]
     temperatures = [6.0]
     num_epochs = [(10,10,10),(20,5,5),(5,20,5),(5,5,20),(0,15,15),(15,15,0),(0,30,0)]
