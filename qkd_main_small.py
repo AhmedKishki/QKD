@@ -121,8 +121,6 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_dir = os.path.join(cwd, "ImageNet/train_small")
     val_dir = os.path.join(cwd, "ImageNet/valid_small")
-    batch_size = 32
-    num_workers = 16
     
     # ------------------------------
     # Experiment 1 Hyperparameters
@@ -130,10 +128,12 @@ def main():
     kd_loss_labels = ['CS', 'KL', 'JS', 'TV']
     alpha_st_pairs = [(0.5,0.5),(0.7,0.3),(1.0,0.5)]
     temperatures = [6.0]
-    num_epochs = [(4,4,4),(6,3,3),(3,6,3),(3,3,6),(6,6,0),(0,6,6),(0,12,0)]
+    num_epochs = [(4,4,4),(6,3,3),(3,6,3),(3,3,6),(6,6,0),(0,6,6),(0,12,0),(3,9,0),(9,3,0),(0,9,3),(0,3,9)]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
+    batch_size = 32
+    num_workers = 16
     
     # ------------------------------
     # Experiment 2 Hyperparameters
