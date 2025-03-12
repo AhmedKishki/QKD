@@ -43,3 +43,6 @@ mobilenet_v3_small,mobilenet_v3_small,"t:0.3, s:0.7",6.0,3-9-0,"top1: 55.90, top
 mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,3-9-0,"top1: 55.01, top5: 78.93"
 mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.5",6.0,9-3-0,"top1: 50.32, top5: 74.07"
 mobilenet_v3_small,mobilenet_v3_small,"t:0.3, s:0.7",6.0,9-3-0,"top1: 50.35, top5: 74.11"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,9-3-0,"top1: 48.55, top5: 72.72"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,30-0-0,"top1: 53.04, top5: 76.25"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,0-30-0,"top1: 62.63, top5: 84.47"
