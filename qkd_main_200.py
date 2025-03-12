@@ -149,7 +149,7 @@ def main():
     # Experiment 2 Hyperparameters
     # ------------------------------
     kd_loss_labels = ['CS', 'KL']
-    alpha_st_pairs = [(0.7,0.3),(0.5,1.0)]
+    alpha_st_pairs = [(0.7,0.3),(1.0,0.5)]
     temperatures = [6.0]
     max_lr = 1e-3
     min_lr = 1e-6
