@@ -592,7 +592,7 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 ############################################################################################
-def evaluate_model_quantized(model, data_loader, neval_batches=None, string_out=True):
+def evaluate_model_quantized(model, data_loader, neval_batches=None):
     model.eval()
     top1 = AverageMeter('Acc@1', ':.2f')
     top5 = AverageMeter('Acc@5', ':.2f')
@@ -609,11 +609,8 @@ def evaluate_model_quantized(model, data_loader, neval_batches=None, string_out=
 
             if neval_batches is not None and cnt >= neval_batches:
                 break
-
-    if string_out:
-        return f'top1: {top1.avg:.2f}, top5: {top5.avg:.2f}'
-    else:
-        return top1, top5
+            break
+    return f'top1: {top1.avg:.2f}, top5: {top5.avg:.2f}'
 ############################################################################################
 def save_results_csv_quant(csv_path,
                      model,
@@ -648,7 +645,8 @@ def save_results_csv_qkd(csv_path,
                           alpha,
                           temperature,
                           epochs,
-                          student_qkd_acc):
+                          student_qkd_acc,
+                          retrial=1):
     """
     Saves the results to a CSV file. If the file exists, it appends a new row; otherwise, it creates the file.
     """
@@ -671,3 +669,46 @@ def save_results_csv_qkd(csv_path,
         })
     
     print(f"Saved results to {csv_path}")
+############################################################################################
+def check_if_experiment_exists(csv_filename, 
+                               teacher_model_name, 
+                               student_model_name, 
+                               alpha_teacher, 
+                               alpha_student, 
+                               temperature, 
+                               num_epochs_selfstudying, 
+                               num_epochs_costudying, 
+                               num_epochs_tutoring,
+                               retrials):
+    """
+    Checks if a given experiment result already exists in the CSV file.
+    It considers retrials: if the same experiment appears 'retrials' times or more, it returns True.
+    """
+    print(f"\n[INFO] Checking existing experiments for:")
+    print(f"       Teacher: {teacher_model_name}, Student: {student_model_name}, Alpha: t:{alpha_teacher:.1f}, s:{alpha_student:.1f}, Temp: {temperature:.1f}")
+
+    if not os.path.exists(csv_filename):
+        print("[INFO] CSV file does not exist. Proceeding with experiment.")
+        return False
+
+    experiment_count = 0  # Count occurrences of the experiment
+
+    with open(csv_filename, mode='r', newline='') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            if not row:
+                continue  # Skip empty rows
+            if (row['Teacher'] == teacher_model_name and
+                row['Student'] == student_model_name and
+                row['Alpha'] == f't:{alpha_teacher:.1f}, s:{alpha_student:.1f}' and
+                row['Temperature'] == f'{temperature:.1f}' and
+                row['Epochs'] == f"{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}"):
+                
+                experiment_count += 1  # Increment count if match found
+
+                if experiment_count >= retrials:
+                    print(f"[WARNING] Experiment has been repeated {experiment_count} times. Skipping...")
+                    return True  # Skip experiment if it reached the retry limit
+
+    print(f"[INFO] Experiment count: {experiment_count}. Proceeding with training.")
+    return False
