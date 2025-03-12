@@ -123,29 +123,26 @@ def main():
     val_dir = os.path.join(cwd, "ImageNet/valid_small")
     batch_size = 32
     num_workers = 16
-    
-    # ------------------------------
-    # Experiment 1 Hyperparameters
-    # ------------------------------
-    kd_loss_labels = ['CS', 'KL', 'JS', 'TV']
-    alpha_st_pairs = [(0.5,0.5),(0.7,0.3),(1.0,0.5)]
-    temperatures = [6.0]
-    num_epochs = [(4,4,4),(6,3,3),(3,6,3),(3,3,6),(6,6,0),(0,6,6),(0,12,0)]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
     
     # ------------------------------
-    # Experiment 2 Hyperparameters
+    # Experiment 1 Hyperparameters
     # ------------------------------
     # kd_loss_labels = ['CS', 'KL', 'JS', 'TV']
-    # alpha_st_pairs = [(0.7,0.3)]
+    # alpha_st_pairs = [(0.5,0.5),(0.7,0.3),(1.0,0.5)]
     # temperatures = [6.0]
-    # num_epochs = [(20,0,0),(0,20,0),(0,0,20),(0,15,5),(5,0,15),(15,0,5),(0,5,15)]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    
+    # num_epochs = [(4,4,4),(6,3,3),(3,6,3),(3,3,6),(6,6,0),(0,6,6),(0,12,0),(3,9,0),(9,3,0),(0,9,3),(0,3,9)]
+
+    # ------------------------------
+    # Experiment 2 Hyperparameters
+    # ------------------------------
+    kd_loss_labels = ['CS', 'KL']
+    alpha_st_pairs = [(1.0,0.5),(0.7,0.3)]
+    temperatures = [6.0]
+    num_epochs = [(30,0,0),(0,30,0),(0,0,30),(0,25,5),(5,0,25),(25,0,5),(0,5,25),(5,5,20),(5,20,5),(0,15,15),(5,10,15),(5,15,10)]
+
     # ------------------------------
     # Experiment 3 Hyperparameters
     # ------------------------------
