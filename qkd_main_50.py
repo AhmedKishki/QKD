@@ -168,20 +168,7 @@ def main():
     # ------------------------------
     # Experiment 4 Hyperparameters
     # ------------------------------
-    name = '00_30_00'
-    retrials = 4
-    kd_loss_labels = ['KL', 'CS']
-    alpha_st_pairs = [(1.0,0.5)]
-    temperatures = [6.0]
-    max_lr = 1e-3
-    min_lr = 1e-6
-    teacher_lr = 1e-6
-    num_epochs = [  (0, 30, 0) ]
-    
-    # # ------------------------------
-    # # Experiment 5 Hyperparameters
-    # # ------------------------------
-    # name = '00_00_50'
+    # name = '00_30_00'
     # retrials = 4
     # kd_loss_labels = ['KL', 'CS']
     # alpha_st_pairs = [(1.0,0.5)]
@@ -189,7 +176,20 @@ def main():
     # max_lr = 1e-3
     # min_lr = 1e-6
     # teacher_lr = 1e-6
-    # num_epochs = [  (0, 0, 50) ]
+    # num_epochs = [  (0, 30, 0) ]
+    
+    # # ------------------------------
+    # # Experiment 5 Hyperparameters
+    # # ------------------------------
+    name = '00_15_15'
+    retrials = 4
+    kd_loss_labels = ['KL', 'CS']
+    alpha_st_pairs = [(1.0,0.5)]
+    temperatures = [6.0]
+    max_lr = 1e-3
+    min_lr = 1e-6
+    teacher_lr = 1e-6
+    num_epochs = [  (0, 15, 15) ]
     
     
     # # ------------------------------
