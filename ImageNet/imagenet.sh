@@ -4,8 +4,8 @@
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 
 # Define download and extraction directories
-DOWNLOAD_DIR="$SCRIPT_DIR/ImageNet"
-EXTRACT_DIR="$SCRIPT_DIR/ImageNet"
+DOWNLOAD_DIR="$SCRIPT_DIR"
+EXTRACT_DIR="$SCRIPT_DIR"
 
 # Create directories if they don’t exist
 mkdir -p "$DOWNLOAD_DIR"
