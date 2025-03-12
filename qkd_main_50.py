@@ -100,6 +100,7 @@ def main():
     # ------------------------------
     # Data Loaders
     # ------------------------------
+    dataset = 'ImageNet_50'
     train_dir = os.path.join(cwd, "ImageNet/train50")
     val_dir = os.path.join(cwd, "ImageNet/valid")
     batch_size = 64
@@ -167,7 +168,7 @@ def main():
     # ------------------------------
     # Experiment 4 Hyperparameters
     # ------------------------------
-    name = '00_50_00'
+    name = '00_30_00'
     retrials = 4
     kd_loss_labels = ['KL', 'CS']
     alpha_st_pairs = [(1.0,0.5)]
@@ -175,7 +176,7 @@ def main():
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
-    num_epochs = [  (0, 50, 0) ]
+    num_epochs = [  (0, 30, 0) ]
     
     # # ------------------------------
     # # Experiment 5 Hyperparameters
@@ -230,8 +231,6 @@ def main():
     # teacher_lr = 1e-6
     # num_epochs = [  (0, 0, 0) ]
 
-
-    
     for teacher_model_name, student_model_name in teacher_student_pairs:
         print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
         teacher = get_model(teacher_model_name, pretrained=True)

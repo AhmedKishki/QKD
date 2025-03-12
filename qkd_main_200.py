@@ -100,6 +100,7 @@ def main():
     # ------------------------------
     # Data Loaders
     # ------------------------------
+    dataset = 'ImageNet_200'
     train_dir = os.path.join(cwd, "ImageNet/train200")
     val_dir = os.path.join(cwd, "ImageNet/valid")
     batch_size = 64
