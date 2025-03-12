@@ -2,6 +2,7 @@ __pycache__/
 ImageNet/train
 ImageNet/valid
 ImageNet/train200
+ImageNet/train50
 ImageNet/train_small
 ImageNet/valid_small
 CIFAR10/train
@@ -13,3 +14,4 @@ Delta/
 !CIFAR10/cifar10.sh
 !CIFAR100/cifar100.sh
 downloads
+*.jpg
