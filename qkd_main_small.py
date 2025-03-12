@@ -1,5 +1,6 @@
 import os
 import csv
+import copy
 import torch
 
 from helper2 import (
@@ -7,39 +8,14 @@ from helper2 import (
     evaluate_model_quantized,
     save_results_csv_qkd,
     get_model,
-    get_data_loaders
+    get_data_loaders,
+    check_if_experiment_exists
 )
 
 cwd = os.getcwd()
 
-def check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
-    """
-    Checks if a given experiment result already exists in the CSV file.
-    """
-    print(f"\n[INFO] Checking existing experiments for:")
-    print(f"       Teacher: {teacher_model_name}, Student: {student_model_name}, Alpha: t:{alpha_teacher:.1f}, s:{alpha_student:.1f}, Temp: {temperature:.1f}")
-
-    if not os.path.exists(csv_filename):
-        print("[INFO] CSV file does not exist. Proceeding with experiment.")
-        return False
-
-    with open(csv_filename, mode='r', newline='') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            if not row:
-                continue  # Skip empty rows
-            if (row['Teacher'] == teacher_model_name and
-                row['Student'] == student_model_name and
-                row['Alpha'] == f't:{alpha_teacher:.1f}, s:{alpha_student:.1f}' and
-                row['Temperature'] == f'{temperature:.1f}' and
-                row['Epochs'] == f"{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}"):
-                print("[WARNING] Experiment already exists. Skipping...")
-                return True
-
-    print("[INFO] Experiment does not exist. Proceeding with training.")
-    return False
-
 def train_quantized_student_with_teacher(
+    csv_file_name,
     kd_loss,
     teacher, 
     student,
@@ -56,15 +32,14 @@ def train_quantized_student_with_teacher(
     device='cuda',
     max_lr=1e-3,
     min_lr=1e-6,
-    teacher_lr=1e-6
+    teacher_lr=1e-6,
+    retrials=1
 ):
     """
     Trains a student model using quantized knowledge distillation from a teacher model.
     """
-    csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_small.csv")
-
     # Check if experiment already exists
-    if check_if_experiment_exists(csv_filename, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring):
+    if check_if_experiment_exists(csv_file_name, teacher_model_name, student_model_name, alpha_teacher, alpha_student, temperature, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring, retrials):
         print(f"[SKIP] Experiment {teacher_model_name} -> {student_model_name} (alpha={alpha_teacher:.1f}, temp={temperature:.1f}) already completed.")
         return
     
@@ -76,11 +51,11 @@ def train_quantized_student_with_teacher(
 
     # Move models to device
     teacher.to(device)
-    student.to(device)
+    student_qkd = student.to(device)
 
     # Train with quantization knowledge distillation
-    student = quantization_knowledge_distillation(
-        student=student,
+    student_qkd = quantization_knowledge_distillation(
+        student=student_qkd,
         teacher=teacher,
         train_loader=train_loader,
         kd_loss=kd_loss,
@@ -98,13 +73,13 @@ def train_quantized_student_with_teacher(
     )
 
     print(f"\n[EVALUATION] Evaluating Quantized Student Model ({student_model_name})...")
-    student_qkd_acc = evaluate_model_quantized(student, val_loader)
+    student_qkd_acc = evaluate_model_quantized(student_qkd.cpu(), val_loader)
     print(f"[RESULT] QKD Accuracy: {student_qkd_acc}")
 
     # Save results to CSV
     print("[INFO] Saving results to CSV...")
     save_results_csv_qkd(
-        csv_filename,
+        csv_file_name,
         teacher_model_name,
         student_model_name,
         f't:{alpha_teacher:.1f}, s:{alpha_student:.1f}',
@@ -118,84 +93,76 @@ def main():
     # ------------------------------
     # Global Configuration
     # ------------------------------
+    name = ''
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_dir = os.path.join(cwd, "ImageNet/train_small")
-    val_dir = os.path.join(cwd, "ImageNet/valid_small")
-    batch_size = 32
-    num_workers = 16
-    max_lr = 1e-3
-    min_lr = 1e-6
-    teacher_lr = 1e-6
+    retrials = 1
     
-    # ------------------------------
-    # Experiment 1 Hyperparameters
-    # ------------------------------
-    # kd_loss_labels = ['CS', 'KL', 'JS', 'TV']
-    # alpha_st_pairs = [(0.5,0.5),(0.7,0.3),(1.0,0.5)]
-    # temperatures = [6.0]
-    # num_epochs = [(4,4,4),(6,3,3),(3,6,3),(3,3,6),(6,6,0),(0,6,6),(0,12,0),(3,9,0),(9,3,0),(0,9,3),(0,3,9)]
-
-    # ------------------------------
-    # Experiment 2 Hyperparameters
-    # ------------------------------
-    kd_loss_labels = ['CS', 'KL']
-    alpha_st_pairs = [(1.0,0.5),(0.7,0.3)]
-    temperatures = [6.0]
-    num_epochs = [(30,0,0),(0,30,0),(0,0,30),(0,25,5),(5,0,25),(25,0,5),(0,5,25),(5,5,20),(5,20,5),(0,15,15),(5,10,15),(5,15,10)]
-
-    # ------------------------------
-    # Experiment 3 Hyperparameters
-    # ------------------------------
-    
-    # alpha_st_pairs = []
-    # temperatures = [6.0]
-    # num_epochs = []
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-
     # ------------------------------
     # Data Loaders
     # ------------------------------
+    train_dir = os.path.join(cwd, "ImageNet/train_small")
+    val_dir = os.path.join(cwd, "ImageNet/valid_small")
+    batch_size = 32
+    num_workers = 8
     print("[INFO] Loading data...")
     train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
     print("[SUCCESS] Data loaded successfully.")
-
+    
     # ------------------------------
     # Define Teacher and Student Models
     # ------------------------------
     teacher_student_pairs = [
         ('mobilenet_v3_small', 'mobilenet_v3_small')
     ]
-    
-    for teacher_model_name, student_model_name in teacher_student_pairs:
-        print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
-        teacher = get_model(teacher_model_name, pretrained=True)
-        student = get_model(student_model_name, pretrained=True)
-        for kd_loss in kd_loss_labels:
-            for num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring in num_epochs:
-                for alpha_s, alpha_t in alpha_st_pairs:
-                    for temp in temperatures:
-                        print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
-                        train_quantized_student_with_teacher(
-                            kd_loss,
-                            teacher,
-                            student,
-                            teacher_model_name,
-                            student_model_name,
-                            train_loader,
-                            val_loader,
-                            alpha_s,
-                            alpha_t,
-                            temp,
-                            num_epochs_selfstudying,
-                            num_epochs_costudying,
-                            num_epochs_tutoring,
-                            device,
-                            max_lr,
-                            min_lr,
-                            teacher_lr
-                        )
+
+    # # ------------------------------
+    # # Test Hyperparameters
+    # # ------------------------------
+    retrials = 4
+    kd_loss_labels = ['KL', 'CS']
+    alpha_st_pairs = [(1.0,0.5)]
+    temperatures = [6.0]
+    max_lr = 1e-3
+    min_lr = 1e-6
+    teacher_lr = 1e-6
+    num_epochs = [  (0, 30, 0),
+                    (0, 0, 30),
+                    (0, 25, 5),
+                    (0, 20, 10)]
+
+
+    for retrial in range(retrials):
+        for teacher_model_name, student_model_name in teacher_student_pairs:
+            print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
+            teacher = get_model(teacher_model_name, pretrained=True)
+            student = get_model(student_model_name, pretrained=True)
+            for kd_loss in kd_loss_labels:
+                for i, (num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring) in enumerate(num_epochs):
+                    csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{i}_small.csv")
+                    for alpha_s, alpha_t in alpha_st_pairs:
+                        for temp in temperatures:
+                            print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
+                            train_quantized_student_with_teacher(
+                                csv_filename,
+                                kd_loss,
+                                teacher,
+                                student,
+                                teacher_model_name,
+                                student_model_name,
+                                train_loader,
+                                val_loader,
+                                alpha_s,
+                                alpha_t,
+                                temp,
+                                num_epochs_selfstudying,
+                                num_epochs_costudying,
+                                num_epochs_tutoring,
+                                device,
+                                max_lr,
+                                min_lr,
+                                teacher_lr,
+                                retrials
+                            )
 
 if __name__ == "__main__":
     main()
