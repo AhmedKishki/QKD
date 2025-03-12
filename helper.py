@@ -1,5 +1,6 @@
 import os
 import csv
+import torch
 from torchvision import models, transforms, datasets
 from torch.utils.data import DataLoader
 
@@ -8,11 +9,8 @@ def get_model(model_name, pretrained=True):
     Returns a model instance pre-trained on ImageNet.
     """
     model_name = model_name.lower()
-    
-    if model_name == 'vgg16':
-        weights = models.VGG16_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.vgg16(weights=weights)
-    elif model_name == 'alexnet':
+
+    if model_name == 'alexnet':
         weights = models.AlexNet_Weights.IMAGENET1K_V1 if pretrained else None
         model = models.alexnet(weights=weights)
     elif model_name == 'mobilenet_v3_small':
@@ -24,42 +22,68 @@ def get_model(model_name, pretrained=True):
     elif model_name == 'resnet18':
         weights = models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
         model = models.resnet18(weights=weights)
-    elif model_name == 'resnet50':
-        weights = models.ResNet50_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.resnet50(weights=weights)
-    elif model_name == 'resnet152':
-        weights = models.ResNet152_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.resnet152(weights=weights)
-    elif model_name == 'vit_b_16':
-        weights = models.ViT_B_16_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.vit_b_16(weights=weights)
-    elif model_name == 'efficientnet_v2_s':
-        weights = models.EfficientNet_V2_S_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.efficientnet_v2_s(weights=weights)
-    elif model_name == 'efficientnet_v2_l':
-        weights = models.EfficientNet_V2_L_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.efficientnet_v2_l(weights=weights)
-    elif model_name == 'efficientnet_b7':
-        weights = models.EfficientNet_B7_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.efficientnet_b7(weights=weights)
-    elif model_name == 'shufflenet_v2':
-        weights = models.ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.shufflenet_v2_x1_0(weights=weights)
-    elif model_name == 'squeezenet':
-        weights = models.SqueezeNet1_1_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.squeezenet1_1(weights=weights)
-    elif model_name == 'swin_v2':
-        weights = models.Swin_V2_B_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.swin_v2_b(weights=weights)
-    elif model_name == 'maxvit_t':
-        weights = models.MaxVit_T_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.maxvit_t(weights=weights)
-    elif model_name == 'convnext_large':
-        weights = models.ConvNeXt_Large_Weights.IMAGENET1K_V1 if pretrained else None
-        model = models.convnext_large(weights=weights)
     else:
         raise ValueError(f"Model {model_name} is not supported.")
         
+    return model
+############################################################################################
+class NewModel(torch.nn.Module):
+    """
+    Wraps a pretrained model with a new classification head.
+
+    Args:
+        pretrained_model (nn.Module): The original pretrained model.
+        num_classes (int): Number of output classes.
+    """
+    def __init__(self, pretrained_model, num_classes):
+        super(NewModel, self).__init__()
+        self.model = pretrained_model
+        self.fc = torch.nn.Linear(1000, num_classes)
+
+    def forward(self, x):
+        x = self.model(x)
+        return self.fc(x)
+############################################################################################
+def fine_tune_model(pretrained_model, num_classes, train_loader, device, freeze=True, lr=1e-3, epochs=10):
+    """
+    Fine-tunes a pretrained model by freezing its layers and training a new classification head.
+
+    Args:
+        pretrained_model (nn.Module): The original pretrained model.
+        num_classes (int): Number of output classes.
+        train_loader (DataLoader): Dataloader for training.
+        device (torch.device): Device to train on.
+        freeze (bool): If True, freezes the pretrained model's weights. Default is True.
+        lr (float): Learning rate for fine-tuning. Default is 1e-3.
+        epochs (int): Number of training epochs. Default is 10.
+
+    Returns:
+        nn.Module: The fine-tuned model.
+    """
+    model = NewModel(pretrained_model, num_classes).to(device)
+
+    if freeze:
+        for param in model.model.parameters():
+            param.requires_grad = False  # Freeze the pretrained model
+
+    optimizer = torch.optim.Adam(model.fc.parameters(), lr=lr)
+    criterion = torch.nn.CrossEntropyLoss()
+
+    model.train()
+    for epoch in range(epochs):
+        total_loss = 0
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+
+            optimizer.zero_grad()
+            loss = criterion(model(inputs), labels)
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+        
+        print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss/len(train_loader):.4f}")
+
     return model
 ############################################################################################
 def get_data_loaders(train_dir, val_dir, batch_size, num_workers=4):
