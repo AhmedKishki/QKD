@@ -33,7 +33,8 @@ def train_quantized_student_with_teacher(
     max_lr=1e-3,
     min_lr=1e-6,
     teacher_lr=1e-6,
-    retrials=1
+    retrials=1,
+    dataset='50'
 ):
     """
     Trains a student model using quantized knowledge distillation from a teacher model.
@@ -69,7 +70,8 @@ def train_quantized_student_with_teacher(
         alpha_s=alpha_student,
         alpha_t=alpha_teacher,
         temperature=temperature,
-        log_interval=100
+        log_interval=100,
+        dataset=dataset
     )
 
     print(f"\n[EVALUATION] Evaluating Quantized Student Model ({student_model_name})...")
@@ -107,8 +109,8 @@ def main():
     # ------------------------------
     # Data Loaders
     # ------------------------------
-    dataset = 'ImageNet_200'
-    train_dir = os.path.join(cwd, "ImageNet/train200")
+    dataset = '200'
+    train_dir = os.path.join(cwd, f"ImageNet/train{dataset}")
     val_dir = os.path.join(cwd, "ImageNet/valid")
     batch_size = 64
     num_workers = 16
@@ -119,15 +121,7 @@ def main():
     # # ------------------------------
     # # Experiment Hyperparameters
     # # ------------------------------
-    retrials = 4
-    kd_loss_labels = ['CS', 'KL']
-    alpha_st_pairs = [(0.5,1.0)]
-    temperatures = [6.0]
-    max_lr = 1e-3
-    min_lr = 1e-6
-    teacher_lr = 1e-6
-    num_epochs = [  (00, 100, 00) ]
-    names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
+
     
     # # ------------------------------
     # # Running Experiment
@@ -135,10 +129,10 @@ def main():
     for teacher_model_name, student_model_name in teacher_student_pairs:
         for kd_loss in kd_loss_labels:
             for i, (num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring) in enumerate(num_epochs):
-                for _ in range(retrials):
-                    for alpha_s, alpha_t in alpha_st_pairs:
-                        for temp in temperatures:
-                            csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{names[i]}_200.csv")
+                for alpha_s, alpha_t in alpha_st_pairs:
+                    for temp in temperatures:
+                        for _ in range(retrials):
+                            csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{names[i]}_{dataset}.csv")
                             print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
                             teacher = get_model(teacher_model_name, pretrained=True)
                             student = get_model(student_model_name, pretrained=True)
