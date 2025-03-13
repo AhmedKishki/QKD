@@ -418,6 +418,29 @@ def quantization_knowledge_distillation(
         lr_lambda=lambda epoch: (min_lr / max_lr) ** (epoch / (num_epochs - 1))
     )
 
+    # === Pre-Evaluation ===
+    student.eval()
+    teacher.eval()
+    with torch.no_grad():
+        running_s_ce_loss = 0.0
+        running_t_ce_loss = 0.0
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            student_outputs = student(inputs)
+            teacher_outputs = teacher(inputs)
+            s_ce_loss = F.cross_entropy(student_outputs, labels)
+            t_ce_loss = F.cross_entropy(teacher_outputs, labels)
+            running_s_ce_loss += s_ce_loss.item()
+            running_t_ce_loss += t_ce_loss.item()
+        
+    epoch_student_loss.append(running_s_ce_loss / len(train_loader))
+    epoch_student_ce_loss.append(running_s_ce_loss / len(train_loader))
+    epoch_student_kd_loss.append(None)
+    epoch_teacher_loss.append(running_t_ce_loss / len(train_loader))
+    epoch_teacher_ce_loss.append(running_t_ce_loss / len(train_loader))
+    epoch_teacher_kd_loss.append(None)
+    save_loss_csv(loss_csv_file, epoch_student_loss, epoch_teacher_loss, epoch_student_ce_loss, epoch_teacher_ce_loss, epoch_student_kd_loss, epoch_teacher_kd_loss)
+
     # === Self-Studying ===
     print("\n=== Self-Studying ===\n")
     student.train()
@@ -754,7 +777,7 @@ def save_loss_csv(filename,
                   teacher_kd_loss):
 
     df = pd.DataFrame({
-        'epoch': range(1, len(student_loss) + 1),
+        'epoch': range(len(student_loss)),
         'student_loss': student_loss,
         'teacher_loss': teacher_loss,
         'student_ce_loss': student_ce_loss,
