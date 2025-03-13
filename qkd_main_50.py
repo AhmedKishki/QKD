@@ -98,6 +98,13 @@ def main():
     retrials = 1
     
     # ------------------------------
+    # Define Teacher and Student Models
+    # ------------------------------
+    teacher_student_pairs = [
+        ('mobilenet_v3_small', 'mobilenet_v3_small')
+    ]
+    
+    # ------------------------------
     # Data Loaders
     # ------------------------------
     dataset = 'ImageNet_50'
@@ -109,138 +116,32 @@ def main():
     train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
     print("[SUCCESS] Data loaded successfully.")
     
-    # ------------------------------
-    # Define Teacher and Student Models
-    # ------------------------------
-    teacher_student_pairs = [
-        ('mobilenet_v3_small', 'mobilenet_v3_small')
-    ]
-    
-    # ------------------------------
-    # Experiment 1 Hyperparameters
-    # ------------------------------
-    # kd_loss_labels = ['CS', 'KL', 'JS', 'TV']
-    # alpha_st_pairs = [(0.5,0.5),(0.7,0.3),(1.0,0.5)]
-    # temperatures = [6.0]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    # num_epochs = [(10,10,10),
-    #               (20,5,5),
-    #               (5,20,5),
-    #               (5,5,20),
-    #               (0,15,15),
-    #               (15,15,0),
-    #               (0,30,0),
-    #               (0,5,25),
-    #               (0,25,5),
-    #               (5,25,0),
-    #               (25,5,0)]
-    
-    # ------------------------------
-    # Experiment 2 Hyperparameters
-    # ------------------------------
-    # kd_loss_labels = ['CS', 'KL']
-    # alpha_st_pairs = [(0.7,0.3),(1.0,0.5)]
-    # temperatures = [6.0]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    # num_epochs = [  (0, 50, 0),
-    #                 (0, 0, 50),
-    #                 (5, 10, 35),
-    #                 (5, 35, 10)]
-                
-    # ------------------------------
-    # Experiment 3 Hyperparameters
-    # ------------------------------
-    # kd_loss_labels = ['CS', 'KL']
-    # alpha_st_pairs = [(0.7,0.3),(1.0,0.5)]
-    # temperatures = [6.0]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    # num_epochs = [  (5, 15, 30),
-    #                 (5, 30, 15),
-    #                 (5, 20, 25),
-    #                 (5, 25, 20)]
-    
-    # ------------------------------
-    # Experiment 4 Hyperparameters
-    # ------------------------------
-    # name = '00_30_00'
-    # retrials = 4
-    # kd_loss_labels = ['KL', 'CS']
-    # alpha_st_pairs = [(1.0,0.5)]
-    # temperatures = [6.0]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    # num_epochs = [  (0, 30, 0) ]
-    
     # # ------------------------------
-    # # Experiment 5 Hyperparameters
+    # # Experiment Hyperparameters
     # # ------------------------------
-    name = '00_15_15'
     retrials = 4
-    kd_loss_labels = ['KL', 'CS']
-    alpha_st_pairs = [(1.0,0.5)]
+    kd_loss_labels = ['CS', 'KL']
+    alpha_st_pairs = [(0.0,0.0)]
     temperatures = [6.0]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
-    num_epochs = [  (0, 15, 15) ]
-    
-    
-    # # ------------------------------
-    # # Experiment 6 Hyperparameters
-    # # ------------------------------
-    # name = '00_40_10'
-    # retrials = 4
-    # kd_loss_labels = ['KL', 'CS']
-    # alpha_st_pairs = [(1.0,0.5)]
-    # temperatures = [6.0]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    # num_epochs = [  (0, 40, 10) ]
+    num_epochs = [  (00, 30, 20) ]
+    names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
-    # # Experiment 7 Hyperparameters
+    # # Running Experiment
     # # ------------------------------
-    # name = '05_40_05'
-    # retrials = 4
-    # kd_loss_labels = ['KL', 'CS']
-    # alpha_st_pairs = [(1.0,0.5)]
-    # temperatures = [6.0]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    # num_epochs = [  (5, 40, 5) ]
-
-    # # ------------------------------
-    # # Test Hyperparameters
-    # # ------------------------------
-    # name = '00_00_00'
-    # retrials = 4
-    # kd_loss_labels = ['KL', 'CS']
-    # alpha_st_pairs = [(1.0,0.5)]
-    # temperatures = [6.0]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    # num_epochs = [  (0, 0, 0) ]
-
     for teacher_model_name, student_model_name in teacher_student_pairs:
-        print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
-        teacher = get_model(teacher_model_name, pretrained=True)
-        student = get_model(student_model_name, pretrained=True)
         for kd_loss in kd_loss_labels:
-            csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{name}_50.csv")
-            for num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring in num_epochs:
+            for i, (num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring) in enumerate(num_epochs):
                 for _ in range(retrials):
                     for alpha_s, alpha_t in alpha_st_pairs:
                         for temp in temperatures:
+                            csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{names[i]}_50.csv")
+                            print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
+                            teacher = get_model(teacher_model_name, pretrained=True)
+                            student = get_model(student_model_name, pretrained=True)
                             print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
                             train_quantized_student_with_teacher(
                                 csv_filename,

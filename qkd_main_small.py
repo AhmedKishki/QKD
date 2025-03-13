@@ -98,50 +98,50 @@ def main():
     retrials = 1
     
     # ------------------------------
-    # Data Loaders
-    # ------------------------------
-    train_dir = os.path.join(cwd, "ImageNet/train_small")
-    val_dir = os.path.join(cwd, "ImageNet/valid_small")
-    batch_size = 32
-    num_workers = 8
-    print("[INFO] Loading data...")
-    train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
-    print("[SUCCESS] Data loaded successfully.")
-    
-    # ------------------------------
     # Define Teacher and Student Models
     # ------------------------------
     teacher_student_pairs = [
         ('mobilenet_v3_small', 'mobilenet_v3_small')
     ]
-
+    
+    # ------------------------------
+    # Data Loaders
+    # ------------------------------
+    dataset = 'ImageNet_50'
+    train_dir = os.path.join(cwd, "ImageNet/train50")
+    val_dir = os.path.join(cwd, "ImageNet/valid")
+    batch_size = 64
+    num_workers = 16
+    print("[INFO] Loading data...")
+    train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
+    print("[SUCCESS] Data loaded successfully.")
+    
     # # ------------------------------
-    # # Test Hyperparameters
+    # # Experiment Hyperparameters
     # # ------------------------------
     retrials = 4
-    dataset = "ImageNet_small"
-    kd_loss_labels = ['KL', 'CS']
-    alpha_st_pairs = [(1.0,0.5)]
+    kd_loss_labels = ['CS', 'KL']
+    alpha_st_pairs = [(0.5,1.0)]
     temperatures = [6.0]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
-    num_epochs = [  (0, 30, 0),
-                    (0, 0, 30),
-                    (0, 25, 5),
-                    (0, 20, 10)]
-
-
-    for retrial in range(retrials):
-        for teacher_model_name, student_model_name in teacher_student_pairs:
-            print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
-            teacher = get_model(teacher_model_name, pretrained=True)
-            student = get_model(student_model_name, pretrained=True)
-            for kd_loss in kd_loss_labels:
-                for i, (num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring) in enumerate(num_epochs):
-                    csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{i}_small.csv")
+    num_epochs = [  (00, 30, 00) ]
+    names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
+    
+    # # ------------------------------
+    # # Running Experiment
+    # # ------------------------------
+    for teacher_model_name, student_model_name in teacher_student_pairs:
+        for kd_loss in kd_loss_labels:
+            for i, (num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring) in enumerate(num_epochs):
+                for _ in range(retrials):
                     for alpha_s, alpha_t in alpha_st_pairs:
                         for temp in temperatures:
+                            csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{names[i]}_50.csv")
+                            print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
+                            teacher = get_model(teacher_model_name, pretrained=True)
+                            student = get_model(student_model_name, pretrained=True)
                             print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
                             train_quantized_student_with_teacher(
                                 csv_filename,
