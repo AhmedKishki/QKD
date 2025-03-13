@@ -398,7 +398,7 @@ def quantization_knowledge_distillation(
     num_epochs = num_epochs_selfstudying + num_epochs_costudying + num_epochs_tutoring
     
     # Prepare loss CSV file
-    loss_csv_file = f'{kd_loss}__{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}__{dataset}.csv'
+    loss_csv_file = f'{kd_loss}__{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}_{datetime.now().strftime("%H%M%S")}_{dataset}.csv'
     epoch_student_loss, epoch_student_ce_loss, epoch_student_kd_loss = [], [], []
     epoch_teacher_loss, epoch_teacher_ce_loss, epoch_teacher_kd_loss = [], [], []
     
