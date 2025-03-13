@@ -383,6 +383,9 @@ def quantization_knowledge_distillation(
     elif kd_loss == 'TV':
         kd_loss_fn = tv_loss
         kd_loss_label = "Total Variation (TV)"
+    elif kd_loss == 'CE':
+        kd_loss_fn = None
+        kd_loss_label = "Cross-Entropy (CE)"
     else:
         raise ValueError(f"Invalid KD loss function: {kd_loss}")
     
@@ -609,7 +612,6 @@ def evaluate_model_quantized(model, data_loader, neval_batches=None):
 
             if neval_batches is not None and cnt >= neval_batches:
                 break
-            break
     return f'top1: {top1.avg:.2f}, top5: {top5.avg:.2f}'
 ############################################################################################
 def save_results_csv_quant(csv_path,
