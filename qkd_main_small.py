@@ -119,6 +119,7 @@ def main():
     # # Test Hyperparameters
     # # ------------------------------
     retrials = 4
+    dataset = "ImageNet_small"
     kd_loss_labels = ['KL', 'CS']
     alpha_st_pairs = [(1.0,0.5)]
     temperatures = [6.0]

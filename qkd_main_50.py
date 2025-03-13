@@ -100,8 +100,8 @@ def main():
     # ------------------------------
     # Data Loaders
     # ------------------------------
-    dataset = 'ImageNet_200'
-    train_dir = os.path.join(cwd, "ImageNet/train200")
+    dataset = 'ImageNet_50'
+    train_dir = os.path.join(cwd, "ImageNet/train50")
     val_dir = os.path.join(cwd, "ImageNet/valid")
     batch_size = 64
     num_workers = 16
@@ -168,7 +168,7 @@ def main():
     # ------------------------------
     # Experiment 4 Hyperparameters
     # ------------------------------
-    # name = '00_50_00'
+    # name = '00_30_00'
     # retrials = 4
     # kd_loss_labels = ['KL', 'CS']
     # alpha_st_pairs = [(1.0,0.5)]
@@ -176,20 +176,20 @@ def main():
     # max_lr = 1e-3
     # min_lr = 1e-6
     # teacher_lr = 1e-6
-    # num_epochs = [  (0, 50, 0) ]
+    # num_epochs = [  (0, 30, 0) ]
     
     # # ------------------------------
     # # Experiment 5 Hyperparameters
     # # ------------------------------
-    # name = '00_00_50'
-    # retrials = 4
-    # kd_loss_labels = ['KL', 'CS']
-    # alpha_st_pairs = [(1.0,0.5)]
-    # temperatures = [6.0]
-    # max_lr = 1e-3
-    # min_lr = 1e-6
-    # teacher_lr = 1e-6
-    # num_epochs = [  (0, 0, 50) ]
+    name = '00_15_15'
+    retrials = 4
+    kd_loss_labels = ['KL', 'CS']
+    alpha_st_pairs = [(1.0,0.5)]
+    temperatures = [6.0]
+    max_lr = 1e-3
+    min_lr = 1e-6
+    teacher_lr = 1e-6
+    num_epochs = [  (0, 15, 15) ]
     
     
     # # ------------------------------
@@ -231,15 +231,14 @@ def main():
     # teacher_lr = 1e-6
     # num_epochs = [  (0, 0, 0) ]
 
-
-    for retrial in range(retrials):
-        for teacher_model_name, student_model_name in teacher_student_pairs:
-            print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
-            teacher = get_model(teacher_model_name, pretrained=True)
-            student = get_model(student_model_name, pretrained=True)
-            for kd_loss in kd_loss_labels:
-                csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{name}_200.csv")
-                for num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring in num_epochs:
+    for teacher_model_name, student_model_name in teacher_student_pairs:
+        print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
+        teacher = get_model(teacher_model_name, pretrained=True)
+        student = get_model(student_model_name, pretrained=True)
+        for kd_loss in kd_loss_labels:
+            csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{name}_50.csv")
+            for num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring in num_epochs:
+                for _ in range(retrials):
                     for alpha_s, alpha_t in alpha_st_pairs:
                         for temp in temperatures:
                             print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
