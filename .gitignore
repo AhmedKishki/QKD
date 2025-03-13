@@ -13,3 +13,5 @@ Delta/
 !CIFAR10/cifar10.sh
 !CIFAR100/cifar100.sh
 downloads
+*.zip
+*.jpg

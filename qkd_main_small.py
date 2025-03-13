@@ -130,15 +130,18 @@ def main():
                     (0, 25, 5),
                     (0, 20, 10)]
 
-
-    for retrial in range(retrials):
-        for teacher_model_name, student_model_name in teacher_student_pairs:
-            print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
-            teacher = get_model(teacher_model_name, pretrained=True)
-            student = get_model(student_model_name, pretrained=True)
-            for kd_loss in kd_loss_labels:
-                for i, (num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring) in enumerate(num_epochs):
-                    csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{i}_small.csv")
+    # # ------------------------------
+    # # Train & Test Models
+    # # ------------------------------
+    for teacher_model_name, student_model_name in teacher_student_pairs:
+        print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
+        teacher = get_model(teacher_model_name, pretrained=True)
+        student = get_model(student_model_name, pretrained=True)
+        for kd_loss in kd_loss_labels:
+            for i, (num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring) in enumerate(num_epochs):
+                csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{i}_small.csv")
+                print(f'\n{csv_filename}\n')
+                for _ in range(retrials):
                     for alpha_s, alpha_t in alpha_st_pairs:
                         for temp in temperatures:
                             print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
