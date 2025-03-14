@@ -123,12 +123,12 @@ def main():
     # # ------------------------------
     retrials = 4
     kd_loss_labels = ['CS', 'KL']
-    alpha_st_pairs = [(1.0,0.5)]
+    alpha_st_pairs = [(1.0,0.5), (1.0,0.1), (0.7,0.3)]
     temperatures = [6.0]
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
-    num_epochs = [  (00,100,00), (00,00,100), (5, 30, 65) ]
+    num_epochs = [ (5, 30, 65), (5, 65, 30), (20, 50, 30) ]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
@@ -143,6 +143,7 @@ def main():
                             csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{names[i]}_{dataset}.csv")
                             print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
                             teacher = get_model(teacher_model_name, pretrained=True)
+                            
                             student = get_model(student_model_name, pretrained=True)
                             print(f"\n[TRAINING SETUP] Alpha Teacher: {alpha_t:.1f}, Alpha Student: {alpha_s:.1f}, Temperature: {temp:.1f}")
                             train_quantized_student_with_teacher(
