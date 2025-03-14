@@ -414,9 +414,9 @@ def quantization_knowledge_distillation(
 
     scheduler_student = optim.lr_scheduler.OneCycleLR(
         optimizer=optimizer_student,
-        max_lr=1e-1,
+        max_lr=1e-3,
         epochs=num_epochs,
-        steps_per_epoch=len(dataloader),
+        steps_per_epoch=len(train_loader),
         pct_start=num_epochs_selfstudying / num_epochs,
         anneal_strategy='cos',
         cycle_momentum=True,

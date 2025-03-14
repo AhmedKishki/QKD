@@ -109,8 +109,8 @@ def main():
     dataset = '200'
     train_dir = os.path.join(cwd, f"ImageNet/train{dataset}")
     val_dir = os.path.join(cwd, "ImageNet/valid")
-    batch_size = 32
-    num_workers = 8
+    batch_size = 64
+    num_workers = 16
     print("[INFO] Loading data...")
     train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
     print("[SUCCESS] Data loaded successfully.")
@@ -122,9 +122,9 @@ def main():
     kd_loss_labels = ['KL', 'CS']
     alpha_st_pairs = [(1.0,0.3)]
     temperatures = [6.0]
-    student_lr = 1e-3
+    student_lr = 1e-4
     teacher_lr = 1e-6
-    num_epochs = [(10, 40, 50)]
+    num_epochs = [(0, 40, 60)]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
