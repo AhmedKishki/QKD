@@ -112,8 +112,8 @@ def main():
     dataset = '200'
     train_dir = os.path.join(cwd, f"ImageNet/train{dataset}")
     val_dir = os.path.join(cwd, "ImageNet/valid")
-    batch_size = 64
-    num_workers = 16
+    batch_size = 32
+    num_workers = 8
     print("[INFO] Loading data...")
     train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
     print("[SUCCESS] Data loaded successfully.")
@@ -121,9 +121,6 @@ def main():
     # # ------------------------------
     # # Experiment Hyperparameters
     # # ------------------------------
-<<<<<<< HEAD
-
-=======
     retrials = 4
     kd_loss_labels = ['CS', 'KL']
     alpha_st_pairs = [(1.0,0.5)]
@@ -131,9 +128,8 @@ def main():
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
-    num_epochs = [  (5, 70, 25) ]
+    num_epochs = [  (00,100,00), (00,00,100), (5,70,20), (0,50,50) ]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
->>>>>>> 14d2eed199f29fe6d7a63601170d32018dd6507e
     
     # # ------------------------------
     # # Running Experiment
@@ -168,7 +164,8 @@ def main():
                                 max_lr,
                                 min_lr,
                                 teacher_lr,
-                                retrials
+                                retrials,
+                                dataset
                             )
 
 if __name__ == "__main__":

@@ -128,7 +128,7 @@ def main():
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
-    num_epochs = [  (00,100,00), (00,00,100), (5,70,20), (0,50,50) ]
+    num_epochs = [  (00,100,00), (00,00,100), (5, 30, 65) ]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
