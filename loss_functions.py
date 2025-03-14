@@ -10,14 +10,16 @@ from datetime import datetime
 class Loss:
     def __init__(self, 
                  dataset,
-                 kd_loss, 
+                 kd_loss,
+                 alpha_s,
+                 alpha_t,
                  num_epochs_selfstudying, 
                  num_epochs_costudying, 
                  num_epochs_tutoring,
                  directory="Losses"):
         
         self.directory = directory
-        self.filename = f'{kd_loss}__{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}_{datetime.now().strftime("%H%M%S")}_{dataset}.csv'
+        self.filename = f'{kd_loss}_{alpha_s:.1f}-{alpha_t:.1f}_{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}_{datetime.now().strftime("%H%M%S")}_{dataset}.csv'
         os.makedirs(self.directory, exist_ok=True)
         
         self.student_loss = []
