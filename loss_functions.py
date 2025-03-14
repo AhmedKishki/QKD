@@ -1,5 +1,79 @@
+import os
+
+import pandas as pd
+
 import torch
 import torch.nn.functional as F
+
+from datetime import datetime
+
+class Loss:
+    def __init__(self, 
+                 dataset,
+                 kd_loss, 
+                 num_epochs_selfstudying, 
+                 num_epochs_costudying, 
+                 num_epochs_tutoring,
+                 directory="Losses"):
+        
+        self.directory = directory
+        self.filename = f'{kd_loss}__{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}_{datetime.now().strftime("%H%M%S")}_{dataset}.csv'
+        os.makedirs(self.directory, exist_ok=True)
+        
+        self.student_loss = []
+        self.teacher_loss = []
+        self.student_ce_loss = []
+        self.teacher_ce_loss = []
+        self.student_kd_loss = []
+        self.teacher_kd_loss = []
+
+    def save(self):
+        """
+        Saves loss data into a CSV file.
+        """
+        df = pd.DataFrame({
+            'epoch': range(len(self.student_loss)),
+            'student_loss': self.student_loss,
+            'teacher_loss': self.teacher_loss,
+            'student_ce_loss': self.student_ce_loss,
+            'teacher_ce_loss': self.teacher_ce_loss,
+            'student_kd_loss': self.student_kd_loss,
+            'teacher_kd_loss': self.teacher_kd_loss
+        })
+        
+        filepath = os.path.join(self.directory, self.filename)
+        df.to_csv(filepath, mode='w', header=True, index=False)
+        
+        print(f"Loss data saved to {filepath}")
+        
+    def print(self):
+        """
+        Prints the latest non-None loss values from non-empty lists.
+        """
+        losses = {
+            "S_Loss": self.student_loss,
+            "T_Loss": self.teacher_loss,
+            "S_CE": self.student_ce_loss,
+            "T_CE": self.teacher_ce_loss,
+            "S_KD": self.student_kd_loss,
+            "T_KD": self.teacher_kd_loss
+        }
+
+        # Extract only non-empty lists with a valid last value
+        last_values = {key: lst[-1] for key, lst in losses.items() if lst and lst[-1] is not None}
+
+        # If no valid values exist, print a message and return
+        if not last_values:
+            print("No valid loss values recorded.")
+            return
+
+        # Get the last recorded epoch number
+        epoch = max(len(lst) for lst in losses.values() if lst) - 1
+
+        # Format output dynamically
+        formatted_values = " | ".join(f"{key}: {val:.4f}" for key, val in last_values.items())
+
+        print(f"Epoch {epoch}: {formatted_values}")
 
 def kl_loss(student_logits, teacher_logits, temperature):
     """

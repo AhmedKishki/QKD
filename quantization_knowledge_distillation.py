@@ -6,17 +6,19 @@ from torch.ao.quantization.quantize_fx import prepare_qat_fx, convert_fx
 from torch.ao.quantization import get_default_qat_qconfig_mapping
 from tqdm import tqdm
 
-from loss_functions import kl_loss, cs_loss, ms_loss, js_loss, tv_loss
+from loss_functions import Loss, kl_loss, cs_loss, ms_loss, js_loss, tv_loss
+
 
 def selfstudying_phase(num_epochs, student, train_loader, device,
-                       optimizer_student, scheduler_student, log_interval):
+                       optimizer_student, scheduler_student, log_interval, loss_handle):
     """
     Selfstudying phase:
     - Only the student is updated using cross-entropy loss.
     """
     student.train()
     for epoch in range(num_epochs):
-        running_loss = 0.0
+        running_s_ce_loss = 0.0  # Initialize correctly
+
         progress_bar = tqdm(train_loader,
                             desc=f"Selfstudying Phase - Epoch {epoch+1}/{num_epochs}",
                             unit="batch")
@@ -29,19 +31,29 @@ def selfstudying_phase(num_epochs, student, train_loader, device,
             loss.backward()
             optimizer_student.step()
 
-            running_loss += loss.item()
+            running_s_ce_loss += loss.item()
+
             if (step + 1) % log_interval == 0:
                 progress_bar.set_postfix({
-                    "S_CE_loss": f"{running_loss / (step + 1):.4f}"
+                    "S_CE_loss": f"{running_s_ce_loss / (step + 1):.4f}"
                 })
 
+        loss_handle.student_loss.append(running_s_ce_loss / len(train_loader))
+        loss_handle.student_ce_loss.append(running_s_ce_loss / len(train_loader))
+        loss_handle.student_kd_loss.append(None)
+        loss_handle.teacher_loss.append(None)
+        loss_handle.teacher_ce_loss.append(None)
+        loss_handle.teacher_kd_loss.append(None)
+
+        loss_handle.print()
+        loss_handle.save()
+
         scheduler_student.step()
-        print(f"Selfstudying - Epoch [{epoch+1}/{num_epochs}] - S_loss: {running_loss / len(train_loader):.4f}")
 
 
 def costudying_phase(num_epochs, student, teacher, train_loader, device,
                      optimizer_student, optimizer_teacher, scheduler_student,
-                     kd_loss_fn, alpha_s, alpha_t, temperature, log_interval):
+                     kd_loss_fn, alpha_s, alpha_t, temperature, log_interval, loss_handle):
     """
     Co-studying phase:
     - Both student and teacher are updated.
@@ -52,6 +64,10 @@ def costudying_phase(num_epochs, student, teacher, train_loader, device,
     for epoch in range(num_epochs):
         running_s_loss = 0.0
         running_t_loss = 0.0
+        running_s_ce_loss = 0.0
+        running_t_ce_loss = 0.0
+        running_s_kd_loss = 0.0
+        running_t_kd_loss = 0.0
 
         progress_bar = tqdm(train_loader,
                             desc=f"Costudying Phase - Epoch {epoch+1}/{num_epochs}",
@@ -83,6 +99,10 @@ def costudying_phase(num_epochs, student, teacher, train_loader, device,
 
             running_s_loss += student_loss.item()
             running_t_loss += teacher_loss.item()
+            running_s_ce_loss += s_ce_loss.item()
+            running_t_ce_loss += t_ce_loss.item()
+            running_s_kd_loss += s_kd_loss.item()
+            running_t_kd_loss += t_kd_loss.item()
 
             if (step + 1) % log_interval == 0:
                 progress_bar.set_postfix({
@@ -90,15 +110,22 @@ def costudying_phase(num_epochs, student, teacher, train_loader, device,
                     "T_loss": f"{running_t_loss / (step + 1):.4f}"
                 })
 
+        loss_handle.student_loss.append(running_s_loss / len(train_loader))
+        loss_handle.student_ce_loss.append(running_s_ce_loss / len(train_loader))
+        loss_handle.student_kd_loss.append(running_s_kd_loss / len(train_loader))
+        loss_handle.teacher_loss.append(running_t_loss / len(train_loader))
+        loss_handle.teacher_ce_loss.append(running_t_ce_loss / len(train_loader))
+        loss_handle.teacher_kd_loss.append(running_t_kd_loss / len(train_loader))
+
+        loss_handle.print()
+        loss_handle.save()
+        
         scheduler_student.step()
-        print(f"Costudying - Epoch [{epoch+1}/{num_epochs}] - "
-              f"S_loss: {running_s_loss / len(train_loader):.4f} | "
-              f"T_loss: {running_t_loss / len(train_loader):.4f}")
 
 
 def tutoring_phase(num_epochs, student, teacher, train_loader, device,
                    optimizer_student, scheduler_student, kd_loss_fn, alpha_s,
-                   temperature, log_interval):
+                   temperature, log_interval, loss_handle):
     """
     Tutoring phase:
     - Only the student is updated.
@@ -109,6 +136,7 @@ def tutoring_phase(num_epochs, student, teacher, train_loader, device,
     teacher.eval()
     for epoch in range(num_epochs):
         running_loss = 0.0
+
         progress_bar = tqdm(train_loader,
                             desc=f"Tutoring Phase - Epoch {epoch+1}/{num_epochs}",
                             unit="batch")
@@ -128,14 +156,17 @@ def tutoring_phase(num_epochs, student, teacher, train_loader, device,
             optimizer_student.step()
 
             running_loss += student_loss.item()
+
             if (step + 1) % log_interval == 0:
                 progress_bar.set_postfix({
                     "S_loss": f"{running_loss / (step + 1):.4f}"
                 })
 
-        scheduler_student.step()
-        print(f"Tutoring - Epoch [{epoch+1}/{num_epochs}] - S_loss: {running_loss / len(train_loader):.4f}")
+        loss_handle.student_loss.append(running_loss / len(train_loader))
+        loss_handle.print()
+        loss_handle.save()
 
+        scheduler_student.step()
 
 def quantization_knowledge_distillation(
     student: torch.nn.Module,
@@ -196,16 +227,45 @@ def quantization_knowledge_distillation(
         optimizer_student,
         lr_lambda=lambda epoch: (min_lr / max_lr) ** (epoch / (total_epochs - 1))
     )
-
+    
+    loss_handle = Loss(dataset,kd_loss, num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring)
+    
+    ############# Pre-Evaluation #############
+    student.eval()
+    teacher.eval()
+    with torch.no_grad():
+        running_s_ce_loss = 0.0
+        running_t_ce_loss = 0.0
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            student_outputs = student(inputs)
+            teacher_outputs = teacher(inputs)
+            s_ce_loss = F.cross_entropy(student_outputs, labels)
+            t_ce_loss = F.cross_entropy(teacher_outputs, labels)
+            running_s_ce_loss += s_ce_loss.item()
+            running_t_ce_loss += t_ce_loss.item()
+            
+    loss_handle.student_loss.append(running_s_ce_loss / len(train_loader))
+    loss_handle.student_ce_loss.append(running_s_ce_loss / len(train_loader))
+    loss_handle.student_kd_loss.append(None)
+    loss_handle.teacher_loss.append(running_t_ce_loss / len(train_loader))
+    loss_handle.teacher_ce_loss.append(running_t_ce_loss / len(train_loader))
+    loss_handle.teacher_kd_loss.append(None)
+    loss_handle.print()
+    loss_handle.save()
+            
+    ############# Self Studying #############
     selfstudying_phase(num_epochs_selfstudying, student, train_loader, device,
-                       optimizer_student, scheduler_student, log_interval)
+                       optimizer_student, scheduler_student, log_interval, loss_handle)
 
+    ############# Co Studying #############
     costudying_phase(num_epochs_costudying, student, teacher, train_loader, device,
                      optimizer_student, optimizer_teacher, scheduler_student,
-                     kd_loss_fn, alpha_s, alpha_t, temperature, log_interval)
+                     kd_loss_fn, alpha_s, alpha_t, temperature, log_interval, loss_handle)
 
+    ############# Tutoring #############
     tutoring_phase(num_epochs_tutoring, student, teacher, train_loader, device,
-                   optimizer_student, scheduler_student, kd_loss_fn, alpha_s, temperature, log_interval)
+                   optimizer_student, scheduler_student, kd_loss_fn, alpha_s, temperature, log_interval, loss_handle)
 
     student.to('cpu')
     student.eval()
