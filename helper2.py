@@ -358,8 +358,7 @@ def quantization_knowledge_distillation(
     num_epochs_selfstudying=5,
     num_epochs_costudying=5,
     num_epochs_tutoring=5,
-    max_lr=1e-3,
-    min_lr=1e-6,
+    student_lr=1e-3,
     teacher_lr=1e-6,
     alpha_s=0.5,
     alpha_t=0.5,
@@ -410,15 +409,30 @@ def quantization_knowledge_distillation(
     student.to(device)
     teacher.to(device)
 
-    optimizer_student = optim.AdamW(student.parameters(), lr=max_lr)
+    optimizer_student = optim.AdamW(student.parameters(), lr=student_lr)
     optimizer_teacher = optim.AdamW(teacher.parameters(), lr=teacher_lr)
 
-    scheduler_student = torch.optim.lr_scheduler.LambdaLR(
-        optimizer_student, 
-        lr_lambda=lambda epoch: (min_lr / max_lr) ** (epoch / (num_epochs - 1))
+    scheduler_student = optim.lr_scheduler.OneCycleLR(
+        optimizer=optimizer_student,
+        max_lr=1e-1,
+        epochs=num_epochs,
+        steps_per_epoch=len(dataloader),
+        pct_start=num_epochs_selfstudying / num_epochs,
+        anneal_strategy='cos',
+        cycle_momentum=True,
+        base_momentum=0.85,
+        max_momentum=0.95,
+        three_phase=True
+    )
+    
+    scheduler_teacher = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer_teacher,
+        patience=4,
+        threshold=1e-2
     )
 
     # === Pre-Evaluation ===
+    print("\n=== Pre-Evaluation ===\n")
     student.eval()
     teacher.eval()
     with torch.no_grad():
@@ -534,6 +548,7 @@ def quantization_knowledge_distillation(
                 })
 
         scheduler_student.step()
+        scheduler_teacher.step(t_ce_loss)
 
         print(
             f"Co-Studying - Epoch [{epoch+1}/{num_epochs_costudying}] - "
