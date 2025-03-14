@@ -33,7 +33,8 @@ def train_quantized_student_with_teacher(
     max_lr=1e-3,
     min_lr=1e-6,
     teacher_lr=1e-6,
-    retrials=1
+    retrials=1,
+    dataset='50'
 ):
     """
     Trains a student model using quantized knowledge distillation from a teacher model.
@@ -69,7 +70,8 @@ def train_quantized_student_with_teacher(
         alpha_s=alpha_student,
         alpha_t=alpha_teacher,
         temperature=temperature,
-        log_interval=100
+        log_interval=100,
+        dataset=dataset
     )
 
     print(f"\n[EVALUATION] Evaluating Quantized Student Model ({student_model_name})...")
@@ -107,11 +109,11 @@ def main():
     # ------------------------------
     # Data Loaders
     # ------------------------------
-    dataset = 'ImageNet_200'
-    train_dir = os.path.join(cwd, "ImageNet/train200")
+    dataset = '200'
+    train_dir = os.path.join(cwd, f"ImageNet/train{dataset}")
     val_dir = os.path.join(cwd, "ImageNet/valid")
-    batch_size = 64
-    num_workers = 16
+    batch_size = 32
+    num_workers = 8
     print("[INFO] Loading data...")
     train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
     print("[SUCCESS] Data loaded successfully.")
@@ -126,7 +128,7 @@ def main():
     max_lr = 1e-3
     min_lr = 1e-6
     teacher_lr = 1e-6
-    num_epochs = [  (5, 70, 25) ]
+    num_epochs = [  (00,100,00), (00,00,100), (5,70,20), (0,50,50) ]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
@@ -135,10 +137,10 @@ def main():
     for teacher_model_name, student_model_name in teacher_student_pairs:
         for kd_loss in kd_loss_labels:
             for i, (num_epochs_selfstudying, num_epochs_costudying, num_epochs_tutoring) in enumerate(num_epochs):
-                for _ in range(retrials):
-                    for alpha_s, alpha_t in alpha_st_pairs:
-                        for temp in temperatures:
-                            csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{names[i]}_200.csv")
+                for alpha_s, alpha_t in alpha_st_pairs:
+                    for temp in temperatures:
+                        for _ in range(retrials):
+                            csv_filename = os.path.join(cwd, f"results_qkd_{kd_loss}_{names[i]}_{dataset}.csv")
                             print(f"\n[MODEL SETUP] Teacher: {teacher_model_name}, Student: {student_model_name}")
                             teacher = get_model(teacher_model_name, pretrained=True)
                             student = get_model(student_model_name, pretrained=True)
@@ -162,7 +164,8 @@ def main():
                                 max_lr,
                                 min_lr,
                                 teacher_lr,
-                                retrials
+                                retrials,
+                                dataset
                             )
 
 if __name__ == "__main__":

@@ -10,6 +10,8 @@ import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
+import pandas as pd
+from datetime import datetime
 
 ############################################################################################
 def get_model(model_name, pretrained=True):
@@ -362,7 +364,8 @@ def quantization_knowledge_distillation(
     alpha_s=0.5,
     alpha_t=0.5,
     temperature=6.0,
-    log_interval=100
+    log_interval=100,
+    dataset='50'
 ):
     """
     Implements Self-Studying, Co-Studying, and Tutoring for quantization-aware knowledge distillation.
@@ -393,7 +396,12 @@ def quantization_knowledge_distillation(
     print(f"\nKD Loss: {kd_loss_label}")
                          
     num_epochs = num_epochs_selfstudying + num_epochs_costudying + num_epochs_tutoring
- 
+    
+    # Prepare loss CSV file
+    loss_csv_file = f'{kd_loss}__{num_epochs_selfstudying}-{num_epochs_costudying}-{num_epochs_tutoring}_{datetime.now().strftime("%H%M%S")}_{dataset}.csv'
+    epoch_student_loss, epoch_student_ce_loss, epoch_student_kd_loss = [], [], []
+    epoch_teacher_loss, epoch_teacher_ce_loss, epoch_teacher_kd_loss = [], [], []
+    
     # Set up QAT configuration using FX Graph Mode
     qconfig_mapping = get_default_qat_qconfig_mapping("x86")
     example_inputs = next(iter(train_loader))[0]  # Get a sample input for tracing
@@ -410,12 +418,36 @@ def quantization_knowledge_distillation(
         lr_lambda=lambda epoch: (min_lr / max_lr) ** (epoch / (num_epochs - 1))
     )
 
+    # === Pre-Evaluation ===
+    student.eval()
+    teacher.eval()
+    with torch.no_grad():
+        running_s_ce_loss = 0.0
+        running_t_ce_loss = 0.0
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            student_outputs = student(inputs)
+            teacher_outputs = teacher(inputs)
+            s_ce_loss = F.cross_entropy(student_outputs, labels)
+            t_ce_loss = F.cross_entropy(teacher_outputs, labels)
+            running_s_ce_loss += s_ce_loss.item()
+            running_t_ce_loss += t_ce_loss.item()
+        
+    epoch_student_loss.append(running_s_ce_loss / len(train_loader))
+    epoch_student_ce_loss.append(running_s_ce_loss / len(train_loader))
+    epoch_student_kd_loss.append(None)
+    epoch_teacher_loss.append(running_t_ce_loss / len(train_loader))
+    epoch_teacher_ce_loss.append(running_t_ce_loss / len(train_loader))
+    epoch_teacher_kd_loss.append(None)
+    save_loss_csv(loss_csv_file, epoch_student_loss, epoch_teacher_loss, epoch_student_ce_loss, epoch_teacher_ce_loss, epoch_student_kd_loss, epoch_teacher_kd_loss)
+
     # === Self-Studying ===
     print("\n=== Self-Studying ===\n")
     student.train()
+    
     for epoch in range(num_epochs_selfstudying):
         running_s_ce_loss = 0.0
-
+        
         progress_bar = tqdm(train_loader, desc=f"Self-Studying - Epoch {epoch+1}/{num_epochs_selfstudying}", unit="batch")
         for step, (inputs, labels) in enumerate(progress_bar):
             inputs, labels = inputs.to(device), labels.to(device)
@@ -437,7 +469,15 @@ def quantization_knowledge_distillation(
 
         scheduler_student.step()
         print(f"Self-Studying - Epoch [{epoch+1}/{num_epochs_selfstudying}] - Loss: {running_s_ce_loss / len(train_loader):.4f}")
-
+        
+        epoch_student_loss.append(running_s_ce_loss / len(train_loader))
+        epoch_student_ce_loss.append(running_s_ce_loss / len(train_loader))
+        epoch_student_kd_loss.append(None)
+        epoch_teacher_loss.append(None)
+        epoch_teacher_ce_loss.append(None)
+        epoch_teacher_kd_loss.append(None)
+        save_loss_csv(loss_csv_file, epoch_student_loss, epoch_teacher_loss, epoch_student_ce_loss, epoch_teacher_ce_loss, epoch_student_kd_loss, epoch_teacher_kd_loss)
+        
     # === Co-Studying ===
     print("\n=== Co-Studying ===\n")
     student.train()
@@ -503,6 +543,14 @@ def quantization_knowledge_distillation(
             f"T_CE: {running_t_ce_loss / len(train_loader):.4f}"
         )
 
+        epoch_student_loss.append(running_s_loss / len(train_loader))
+        epoch_student_ce_loss.append(running_s_ce_loss / len(train_loader))
+        epoch_student_kd_loss.append(running_s_kd_loss / len(train_loader))
+        epoch_teacher_loss.append(running_t_loss / len(train_loader))
+        epoch_teacher_ce_loss.append(running_t_ce_loss / len(train_loader))
+        epoch_teacher_kd_loss.append(running_t_kd_loss / len(train_loader))
+        save_loss_csv(loss_csv_file, epoch_student_loss, epoch_teacher_loss, epoch_student_ce_loss, epoch_teacher_ce_loss, epoch_student_kd_loss, epoch_teacher_kd_loss)
+        
     # === Tutoring ===
     print("\n=== Tutoring ===\n")
     student.train()
@@ -546,8 +594,15 @@ def quantization_knowledge_distillation(
         print(
             f"Tutoring - Epoch [{epoch+1}/{num_epochs_tutoring}] - "
             f"S_Loss: {running_s_loss / len(train_loader):.4f} | "
-            f"S_CE: {running_s_ce_loss / len(train_loader):.4f}"
-        )
+            f"S_CE: {running_s_ce_loss / len(train_loader):.4f}")
+        
+        epoch_student_loss.append(running_s_loss / len(train_loader))
+        epoch_student_ce_loss.append(running_s_ce_loss / len(train_loader))
+        epoch_student_kd_loss.append(running_s_kd_loss / len(train_loader))
+        epoch_teacher_loss.append(None)
+        epoch_teacher_ce_loss.append(None)
+        epoch_teacher_kd_loss.append(None)
+        save_loss_csv(loss_csv_file, epoch_student_loss, epoch_teacher_loss, epoch_student_ce_loss, epoch_teacher_ce_loss, epoch_student_kd_loss, epoch_teacher_kd_loss)
         
     # Convert to quantized inference format
     student.to('cpu')
@@ -595,7 +650,7 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 ############################################################################################
-def evaluate_model_quantized(model, data_loader, neval_batches=None):
+def evaluate_model_quantized(model, data_loader):
     model.eval()
     top1 = AverageMeter('Acc@1', ':.2f')
     top5 = AverageMeter('Acc@5', ':.2f')
@@ -610,8 +665,6 @@ def evaluate_model_quantized(model, data_loader, neval_batches=None):
             top1.update(acc1[0].cpu().item(), image.size(0))
             top5.update(acc5[0].cpu().item(), image.size(0))
 
-            if neval_batches is not None and cnt >= neval_batches:
-                break
     return f'top1: {top1.avg:.2f}, top5: {top5.avg:.2f}'
 ############################################################################################
 def save_results_csv_quant(csv_path,
@@ -714,3 +767,24 @@ def check_if_experiment_exists(csv_filename,
 
     print(f"[INFO] Experiment count: {experiment_count}. Proceeding with training.")
     return False
+############################################################################################
+def save_loss_csv(filename,
+                  student_loss, 
+                  teacher_loss, 
+                  student_ce_loss, 
+                  teacher_ce_loss, 
+                  student_kd_loss, 
+                  teacher_kd_loss):
+
+    df = pd.DataFrame({
+        'epoch': range(len(student_loss)),
+        'student_loss': student_loss,
+        'teacher_loss': teacher_loss,
+        'student_ce_loss': student_ce_loss,
+        'teacher_ce_loss': teacher_ce_loss,
+        'student_kd_loss': student_kd_loss,
+        'teacher_kd_loss': teacher_kd_loss
+    })
+
+    df.to_csv(f'Losses/{filename}', mode='w', header=True, index=False)
+############################################################################################
