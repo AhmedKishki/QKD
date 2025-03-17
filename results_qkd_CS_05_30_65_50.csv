@@ -1,0 +1,9 @@
+Teacher,Student,Alpha,Temperature,Epochs,QKD Accuracy
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,5-30-65,"top1: 61.47, top5: 83.98"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,5-30-65,"top1: 61.35, top5: 83.71"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,5-30-65,"top1: 61.33, top5: 83.78"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:1.0",6.0,5-30-65,"top1: 61.58, top5: 83.81"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,5-30-65,"top1: 60.66, top5: 83.30"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,5-30-65,"top1: 60.89, top5: 83.36"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,5-30-65,"top1: 60.55, top5: 83.22"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,5-30-65,"top1: 61.01, top5: 83.51"
