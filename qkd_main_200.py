@@ -30,8 +30,7 @@ def train_quantized_student_with_teacher(
     num_epochs_costudying=5,
     num_epochs_tutoring=5,
     device='cuda',
-    max_lr=1e-3,
-    min_lr=1e-6,
+    student_lr=1e-2,
     teacher_lr=1e-6,
     retrials=1,
     dataset='50'
@@ -48,7 +47,6 @@ def train_quantized_student_with_teacher(
     print(f"       Teacher: {teacher_model_name}, Student: {student_model_name}")
     print(f"       Alpha Student: {alpha_student:.1f}, Alpha Teacher: {alpha_teacher:.1f}, Temperature: {temperature:.1f}")
     print(f"       Training Details: Self-Studying: {num_epochs_selfstudying} epochs, Co-Studying: {num_epochs_costudying} epochs, Tutoring: {num_epochs_tutoring} epochs")
-    print(f"       Device: {device}, Max LR: {max_lr:.2e}, Min LR: {min_lr:.2e}, Teacher LR: {teacher_lr:.2e}")
 
     # Move models to device
     teacher.to(device)
@@ -64,8 +62,7 @@ def train_quantized_student_with_teacher(
         num_epochs_costudying=num_epochs_costudying,
         num_epochs_tutoring=num_epochs_tutoring,
         device=device,
-        max_lr=max_lr,
-        min_lr=min_lr,
+        student_lr=student_lr,
         teacher_lr=teacher_lr,
         alpha_s=alpha_student,
         alpha_t=alpha_teacher,
@@ -112,8 +109,8 @@ def main():
     dataset = '200'
     train_dir = os.path.join(cwd, f"ImageNet/train{dataset}")
     val_dir = os.path.join(cwd, "ImageNet/valid")
-    batch_size = 32
-    num_workers = 8
+    batch_size = 64
+    num_workers = 16
     print("[INFO] Loading data...")
     train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers)
     print("[SUCCESS] Data loaded successfully.")
@@ -122,13 +119,12 @@ def main():
     # # Experiment Hyperparameters
     # # ------------------------------
     retrials = 4
-    kd_loss_labels = ['CS', 'KL']
+    kd_loss_labels = ['KL', 'CS']
     alpha_st_pairs = [(1.0,0.5)]
     temperatures = [6.0]
-    max_lr = 1e-3
-    min_lr = 1e-6
+    student_lr = 1e-4
     teacher_lr = 1e-6
-    num_epochs = [  (00,100,00), (00,00,100), (5,70,20), (0,50,50) ]
+    num_epochs = [(0, 50, 50), (5, 30, 65)]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
@@ -161,8 +157,7 @@ def main():
                                 num_epochs_costudying,
                                 num_epochs_tutoring,
                                 device,
-                                max_lr,
-                                min_lr,
+                                student_lr,
                                 teacher_lr,
                                 retrials,
                                 dataset
