@@ -1,0 +1,2 @@
+epoch,student_loss,teacher_loss,student_ce_loss,teacher_ce_loss,student_kd_loss,teacher_kd_loss
+0,8.561152801489282,1.3912996072750872,8.561152801489282,1.3912996072750872,,
