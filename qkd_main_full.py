@@ -106,8 +106,8 @@ def main():
     # ------------------------------
     # Data Loaders
     # ------------------------------
-    dataset = '200'
-    train_dir = os.path.join(cwd, f"ImageNet/train{dataset}")
+    dataset = 'full'
+    train_dir = os.path.join(cwd, f"ImageNet/train")
     val_dir = os.path.join(cwd, "ImageNet/valid")
     batch_size = 64
     num_workers = 16
@@ -120,7 +120,7 @@ def main():
     # # ------------------------------
     retrials = 4
     kd_loss_labels = ['KL', 'CS']
-    alpha_st_pairs = [(1.0,0.1),(0.7,0.3)]
+    alpha_st_pairs = [(1.0,0.5)]
     temperatures = [6.0]
     student_lr = 1e-4
     teacher_lr = 1e-6
