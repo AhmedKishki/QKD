@@ -120,11 +120,11 @@ def main():
     # # ------------------------------
     retrials = 4
     kd_loss_labels = ['KL', 'CS']
-    alpha_st_pairs = [(1.0,0.5)]
+    alpha_st_pairs = [(1.0,0.1)]
     temperatures = [6.0]
     student_lr = 1e-4
     teacher_lr = 1e-6
-    num_epochs = [(0, 50, 50), (5, 30, 65)]
+    num_epochs = [(0, 90, 10), (0, 50, 50), (5, 30, 65)]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
