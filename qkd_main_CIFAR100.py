@@ -125,14 +125,14 @@ def main():
     # # Experiment Hyperparameters
     # # ------------------------------
     retrials = 4
-    kd_loss_labels = ['CS']
+    kd_loss_labels = ['CE']
     # alpha_st_pairs = [(1.0,0.1)]
     # alpha_st_pairs = [(1.0,0.5)]
-    alpha_st_pairs = [(0.7,0.3)]
+    alpha_st_pairs = [(0.0,0.0)]
     temperatures = [6.0]
     student_lr = 1e-4
     teacher_lr = 1e-6
-    num_epochs = [(0, 90, 10), (0, 50, 50), (5, 30, 65)]
+    num_epochs = [(100,0,0)]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
