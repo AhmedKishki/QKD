@@ -125,7 +125,7 @@ def main():
     # # Experiment Hyperparameters
     # # ------------------------------
     retrials = 4
-    kd_loss_labels = ['KL', 'CS']
+    kd_loss_labels = ['CS']
     # alpha_st_pairs = [(1.0,0.1)]
     # alpha_st_pairs = [(1.0,0.5)]
     alpha_st_pairs = [(0.7,0.3)]
