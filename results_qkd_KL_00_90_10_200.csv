@@ -1,0 +1,4 @@
+Teacher,Student,Alpha,Temperature,Epochs,QKD Accuracy
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,0-90-10,"top1: 62.49, top5: 84.51"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,0-90-10,"top1: 62.64, top5: 84.64"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,0-90-10,"top1: 62.50, top5: 84.45"
