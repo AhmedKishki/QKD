@@ -82,46 +82,30 @@ def get_data_loaders(train_dir, val_dir, batch_size, num_workers=4, dataset='Ima
         val_dir (str): Directory path for validation data (class-wise subfolders).
         batch_size (int): Batch size.
         num_workers (int): Number of DataLoader workers.
-        dataset (str): 'ImageNet' or 'CIFAR10'.
+        dataset (str): 'ImageNet', 'CIFAR10', or 'CIFAR100'.
     
     Returns:
         (DataLoader, DataLoader): train_loader and val_loader
     """
     
     # Transforms depend on dataset
-    if dataset == 'ImageNet':
-        # Typical ImageNet transforms
+    if dataset in ['ImageNet', 'CIFAR10', 'CIFAR100']:
+        # Resize smaller datasets to 224x224 for compatibility with ImageNet-pretrained models
         train_transforms = transforms.Compose([
-            transforms.RandomResizedCrop(224),
+            transforms.Resize(224) if dataset in ['CIFAR10', 'CIFAR100'] else transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225]),
         ])
         val_transforms = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225]),
-        ])
-    elif dataset == 'CIFAR10':
-        # Resize to 224x224 to be consistent with ImageNet-trained models
-        train_transforms = transforms.Compose([
-            transforms.Resize(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225]),
-        ])
-        val_transforms = transforms.Compose([
-            transforms.Resize(224),
-            transforms.ToTensor(),
+            transforms.Resize(224) if dataset in ['CIFAR10', 'CIFAR100'] else transforms.Resize(256),
+            transforms.CenterCrop(224) if dataset == 'ImageNet' else transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225]),
         ])
     else:
-        raise ValueError("Unsupported dataset. Choose either 'ImageNet' or 'CIFAR10'.")
+        raise ValueError("Unsupported dataset. Choose from 'ImageNet', 'CIFAR10', or 'CIFAR100'.")
 
     # Build datasets using ImageFolder
     train_dataset = datasets.ImageFolder(train_dir, transform=train_transforms)

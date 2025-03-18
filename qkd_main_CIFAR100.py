@@ -112,9 +112,9 @@ def main():
     # ------------------------------
     # Data Loaders
     # ------------------------------
-    dataset = 'CIFAR10'
-    train_dir = os.path.join(cwd, "CIFAR10/train")
-    val_dir = os.path.join(cwd, "CIFAR10/valid")
+    dataset = 'CIFAR100'
+    train_dir = os.path.join(cwd, "CIFAR100/train")
+    val_dir = os.path.join(cwd, "CIFAR100/valid")
     batch_size = 32
     num_workers = 16
     print("[INFO] Loading data...")
