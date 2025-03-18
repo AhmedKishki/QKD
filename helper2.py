@@ -73,49 +73,66 @@ def get_model(model_name, pretrained=True):
         
     return model
 ############################################################################################
-def get_data_loaders(train_dir, val_dir, batch_size, num_workers=4):
+def get_data_loaders(train_dir, val_dir, batch_size, num_workers=4, dataset='ImageNet'):
     """
-    Prepares and returns the train and validation DataLoaders.
-    
-    Optionally, if train_samples_per_class is provided,
-    only that many random samples per class will be selected for the training set.
-    The validation set will remain the full dataset.
+    Prepares and returns the train and validation DataLoaders using ImageFolder.
     
     Args:
-        train_dir (str): Directory path for training data.
-        val_dir (str): Directory path for validation data.
+        train_dir (str): Directory path for training data (class-wise subfolders).
+        val_dir (str): Directory path for validation data (class-wise subfolders).
         batch_size (int): Batch size.
         num_workers (int): Number of DataLoader workers.
-        train_samples_per_class (int, optional): Number of samples to select per class for the training set.
+        dataset (str): 'ImageNet' or 'CIFAR10'.
     
     Returns:
-        train_loader, val_loader: DataLoaders for training and validation.
+        (DataLoader, DataLoader): train_loader and val_loader
     """
-    # Define transforms for training and validation
-    train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225]),
-    ])
+    
+    # Transforms depend on dataset
+    if dataset == 'ImageNet':
+        # Typical ImageNet transforms
+        train_transforms = transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ])
+        val_transforms = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ])
+    elif dataset == 'CIFAR10':
+        # Resize to 224x224 to be consistent with ImageNet-trained models
+        train_transforms = transforms.Compose([
+            transforms.Resize(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ])
+        val_transforms = transforms.Compose([
+            transforms.Resize(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ])
+    else:
+        raise ValueError("Unsupported dataset. Choose either 'ImageNet' or 'CIFAR10'.")
 
-    val_transforms = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225]),
-    ])
-
-    # Load the full datasets
+    # Build datasets using ImageFolder
     train_dataset = datasets.ImageFolder(train_dir, transform=train_transforms)
     val_dataset = datasets.ImageFolder(val_dir, transform=val_transforms)
-    
+
     # Create DataLoaders
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, 
+                              shuffle=True, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, 
+                            shuffle=False, num_workers=num_workers)
+
     print(f"Total train samples: {len(train_dataset)}")
     print(f"Total val samples: {len(val_dataset)}")
     print(f"Train steps per epoch: {len(train_loader)}")

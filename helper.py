@@ -3,7 +3,8 @@ import csv
 import torch
 from torchvision import models, transforms, datasets
 from torch.utils.data import DataLoader
-import pandas as pd
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from tqdm import tqdm
 
 def get_model(model_name, pretrained=True):
     """
@@ -45,7 +46,7 @@ class NewModel(torch.nn.Module):
         x = self.model(x)
         return self.fc(x)
 ############################################################################################
-def fine_tune_model(pretrained_model, num_classes, train_loader, device, freeze=True, lr=1e-3, epochs=10):
+def fine_tune_model(pretrained_model, num_classes, train_loader, valid_loader, device, lr=1e-3, epochs=10):
     """
     Fine-tunes a pretrained model by freezing its layers and training a new classification head.
 
@@ -53,8 +54,8 @@ def fine_tune_model(pretrained_model, num_classes, train_loader, device, freeze=
         pretrained_model (nn.Module): The original pretrained model.
         num_classes (int): Number of output classes.
         train_loader (DataLoader): Dataloader for training.
+        valid_loader (DataLoader): Dataloader for validation.
         device (torch.device): Device to train on.
-        freeze (bool): If True, freezes the pretrained model's weights. Default is True.
         lr (float): Learning rate for fine-tuning. Default is 1e-3.
         epochs (int): Number of training epochs. Default is 10.
 
@@ -63,27 +64,59 @@ def fine_tune_model(pretrained_model, num_classes, train_loader, device, freeze=
     """
     model = NewModel(pretrained_model, num_classes).to(device)
 
-    if freeze:
-        for param in model.model.parameters():
-            param.requires_grad = False  # Freeze the pretrained model
-
-    optimizer = torch.optim.Adam(model.fc.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    scheduler = CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
     criterion = torch.nn.CrossEntropyLoss()
 
-    model.train()
-    for epoch in range(epochs):
-        total_loss = 0
-        for inputs, labels in train_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+    print('\n=============FINE TUNING MODEL=============\n')
 
+    best_valid_loss = float('inf')
+
+    for epoch in range(epochs):
+        total_train_loss = 0
+        model.train()
+
+        progress_bar = tqdm(train_loader, desc=f"Training - Epoch {epoch+1}/{epochs}", unit="batch")
+        for step, (inputs, labels) in enumerate(progress_bar):
+            inputs, labels = inputs.to(device), labels.to(device)
             optimizer.zero_grad()
-            loss = criterion(model(inputs), labels)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            total_train_loss += loss.item()
 
-            total_loss += loss.item()
-        
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss/len(train_loader):.4f}")
+            if (step + 1) % 100 == 0:
+                progress_bar.set_postfix(loss=loss.item())
+
+        # Validation
+        model.eval()
+        total_valid_loss = 0
+        correct, total = 0, 0
+
+        progress_bar_valid = tqdm(valid_loader, desc=f"Validation - Epoch {epoch+1}/{epochs}", unit="batch")
+        with torch.no_grad():
+            for step, (inputs, labels) in enumerate(progress_bar_valid):
+                inputs, labels = inputs.to(device), labels.to(device)
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                total_valid_loss += loss.item()
+
+                _, predicted = torch.max(outputs, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+                if (step + 1) % 100 == 0:
+                    progress_bar_valid.set_postfix(loss=loss.item())
+
+        avg_train_loss = total_train_loss / len(train_loader)
+        avg_valid_loss = total_valid_loss / len(valid_loader)
+        accuracy = 100 * correct / total
+
+        print(f"Epoch {epoch+1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Valid Loss: {avg_valid_loss:.4f}, Accuracy: {accuracy:.2f}%")
+
+        # Adjust learning rate
+        scheduler.step()
 
     return model
 ############################################################################################
