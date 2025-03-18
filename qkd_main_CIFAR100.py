@@ -55,8 +55,8 @@ def train_quantized_student_with_teacher(
     student_qkd = student.to(device)
 
     # Fine tuning
-    teacher = fine_tune_model(teacher, 10, train_loader, val_loader, device)
-    student_qkd = fine_tune_model(student_qkd, 10, train_loader, val_loader, device)
+    teacher = fine_tune_model(teacher, 100, train_loader, val_loader, device, epochs=20)
+    student_qkd = fine_tune_model(student_qkd, 100, train_loader, val_loader, device, epochs=20)
 
     # Train with quantization knowledge distillation
     student_qkd = quantization_knowledge_distillation(
@@ -126,7 +126,9 @@ def main():
     # # ------------------------------
     retrials = 4
     kd_loss_labels = ['KL', 'CS']
-    alpha_st_pairs = [(1.0,0.1),(1.0,0.5),(0.7,0.3)]
+    # alpha_st_pairs = [(1.0,0.1)]
+    # alpha_st_pairs = [(1.0,0.5)]
+    alpha_st_pairs = [(0.7,0.3)]
     temperatures = [6.0]
     student_lr = 1e-4
     teacher_lr = 1e-6
