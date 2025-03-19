@@ -118,13 +118,13 @@ def main():
     # # ------------------------------
     # # Experiment Hyperparameters
     # # ------------------------------
-    retrials = 4
+    retrials = 3
     kd_loss_labels = ['KL', 'CS']
-    alpha_st_pairs = [(1.0,0.1)]
+    alpha_st_pairs = [(0.7,0.3)]
     temperatures = [6.0]
     student_lr = 1e-4
     teacher_lr = 1e-6
-    num_epochs = [(0, 90, 10), (0, 50, 50), (5, 30, 65)]
+    num_epochs = [(30,20,50)]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
