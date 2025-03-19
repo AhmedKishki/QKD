@@ -14,7 +14,7 @@ if torch.cuda.is_available():
 
 # Constants
 retrials = 5
-total_epochs = [10, 20, 30, 50, 100]
+total_epochs = [5, 20]
 cwd = os.getcwd()
 models = ['mobilenet_v3_small']
 dataset = 'CIFAR100'
@@ -40,14 +40,14 @@ for model_name in models:
     top1_accuracies = []
     top5_accuracies = []
     for epochs in total_epochs:
-        for _ in range(retrials):
+        for i in range(retrials):
             pretrained_model = get_model(model_name, pretrained=True)
             model = NewModel(pretrained_model, num_classes).to(device)
             optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
             scheduler = CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
             criterion = torch.nn.CrossEntropyLoss()
 
-            print(f'\n=============FINE-TUNING {model_name}=============\n')
+            print(f'\n============= FINE-TUNING {model_name} trial # {i+1} for {dataset} =============\n')
 
             for epoch in range(epochs):
                 model.train()
