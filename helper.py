@@ -1,6 +1,7 @@
 import os
 import csv
 import torch
+from torch import nn
 from torchvision import models, transforms, datasets
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -29,22 +30,29 @@ def get_model(model_name, pretrained=True):
         
     return model
 ############################################################################################
-class NewModel(torch.nn.Module):
+class NewModel(nn.Module):
     """
-    Wraps a pretrained model with a new classification head.
-
-    Args:
-        pretrained_model (nn.Module): The original pretrained model.
-        num_classes (int): Number of output classes.
+    Modifies only the last classification layer while keeping the rest of the model unchanged.
+    Works with ResNet, MobileNet, EfficientNet, and similar architectures.
     """
     def __init__(self, pretrained_model, num_classes):
         super(NewModel, self).__init__()
-        self.model = pretrained_model
-        self.fc = torch.nn.Linear(1000, num_classes)
 
+        # Store the full model
+        self.model = pretrained_model
+
+        # Modify only the last linear layer while keeping the existing classifier
+        if hasattr(pretrained_model, 'fc'):  # For ResNet, EfficientNet, etc.
+            in_features = pretrained_model.fc.in_features
+            self.model.fc = nn.Linear(in_features, num_classes)  # Replace final layer
+        elif hasattr(pretrained_model, 'classifier'):  # For MobileNet, VGG, etc.
+            in_features = pretrained_model.classifier[-1].in_features
+            self.model.classifier[-1] = nn.Linear(in_features, num_classes)  # Replace only last layer
+        else:
+            raise ValueError("Unsupported model architecture")
+        
     def forward(self, x):
-        x = self.model(x)
-        return self.fc(x)
+        return self.model(x)  # Directly use the modified model
 ############################################################################################
 def fine_tune_model(pretrained_model, num_classes, train_loader, valid_loader, device, lr=1e-3, epochs=10):
     """
@@ -64,7 +72,7 @@ def fine_tune_model(pretrained_model, num_classes, train_loader, valid_loader, d
     """
     model = NewModel(pretrained_model, num_classes).to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
     criterion = torch.nn.CrossEntropyLoss()
 
