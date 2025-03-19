@@ -1,0 +1,4 @@
+Model,Dataset,Epochs,Avg Top-1 Acc,Std Top-1 Acc,Avg Top-5 Acc,Std Top-5 Acc
+mobilenet_v3_small,CIFAR100,10,74.14,0.24,93.7,0.25
+mobilenet_v3_small,CIFAR100,5,73.93,0.29,93.87,0.13
+mobilenet_v3_small,CIFAR100,20,73.98,0.26,93.47,0.44
