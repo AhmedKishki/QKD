@@ -124,7 +124,7 @@ def main():
     # # ------------------------------
     # # Experiment Hyperparameters
     # # ------------------------------
-    retrials = 1
+    retrials = 2
     kd_loss_labels = ['KL','CS']
     alpha_st_pairs = [(0.5,0.5),(0.1,1.0)]
     temperatures = [6.0]
