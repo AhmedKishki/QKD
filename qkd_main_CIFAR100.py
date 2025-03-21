@@ -126,7 +126,7 @@ def main():
     # # ------------------------------
     retrials = 2
     kd_loss_labels = ['KL','CS']
-    alpha_st_pairs = [(0.5,0.5),(0.1,1.0)]
+    alpha_st_pairs = [(0.5,0.5),(1.0,0.1)]
     temperatures = [6.0]
     student_lr = 1e-4
     teacher_lr = 1e-6
