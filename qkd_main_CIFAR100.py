@@ -115,7 +115,7 @@ def main():
     dataset = 'CIFAR100'
     train_dir = os.path.join(cwd, "CIFAR100/train")
     val_dir = os.path.join(cwd, "CIFAR100/valid")
-    batch_size = 32
+    batch_size = 64
     num_workers = 16
     print("[INFO] Loading data...")
     train_loader, val_loader = get_data_loaders(train_dir, val_dir, batch_size, num_workers, dataset)
@@ -124,13 +124,13 @@ def main():
     # # ------------------------------
     # # Experiment Hyperparameters
     # # ------------------------------
-    retrials = 2
-    kd_loss_labels = ['KL','CS']
-    alpha_st_pairs = [(0.5,0.5),(0.1,1.0)]
+    retrials = 1
+    kd_loss_labels = ['CS','KL']
+    alpha_st_pairs = [(0.7,0.3)]
     temperatures = [6.0]
     student_lr = 1e-4
     teacher_lr = 1e-6
-    num_epochs = [(30,100,70)]
+    num_epochs = [(30,100,70),(30,0,0),(30,100,0)]
     names = ["_".join(f"{x:02d}" for x in t) for t in num_epochs]
     
     # # ------------------------------
