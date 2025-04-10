@@ -13,3 +13,7 @@ mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,30-100-70,"top1: 74.49,
 mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,30-100-70,"top1: 74.47, top5: 93.84"
 mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,30-100-70,"top1: 73.59, top5: 93.74"
 mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",6.0,30-100-70,"top1: 74.07, top5: 93.87"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",2.0,30-100-70,"top1: 73.68, top5: 93.27"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.5",2.0,30-100-70,"top1: 74.24, top5: 93.16"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.5, s:0.5",2.0,30-100-70,"top1: 74.64, top5: 93.40"
+mobilenet_v3_small,mobilenet_v3_small,"t:0.1, s:1.0",2.0,30-100-70,"top1: 74.44, top5: 93.74"
